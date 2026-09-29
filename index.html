@@ -1,43 +1,37 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MetGames — A METXON Product</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MetGames Advanced Studio</title>
 
+<!-- Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
 :root{
-  --bg:#050a14;
-  --panel:#0b1220;
-  --panel2:#101b30;
-  --line:#22314d;
-  --text:#f4f7ff;
-  --muted:#91a4c3;
-  --cyan:#35d7ff;
-  --blue:#55a8ff;
-  --danger:#ff6b7a;
-  --success:#5ee7a2;
-  --radius:20px;
+  --bg:#06101d;
+  --p:#0b192b;
+  --p2:#10253d;
+  --line:#1e3a58;
+  --text:#eef7ff;
+  --muted:#91a8c0;
+  --blue:#2d8cff;
+  --purple:#985cff;
+  --green:#31d48b;
+  --yellow:#ffd24d;
+  --red:#ff647c;
 }
 
 *{box-sizing:border-box}
 
-html,body{
-  margin:0;
-  padding:0;
-  min-height:100%;
-  background:
-    radial-gradient(circle at 75% 15%,rgba(37,105,180,.18),transparent 30%),
-    radial-gradient(circle at 20% 30%,rgba(0,205,255,.07),transparent 25%),
-    var(--bg);
-  color:var(--text);
-  font-family:Inter,Arial,sans-serif;
-}
-
 body{
-  overflow-x:hidden;
+  margin:0;
+  min-height:100vh;
+  background:
+    radial-gradient(circle at 50% -10%,#173d62,#06101d 50%,#030912);
+  color:var(--text);
+  font:14px system-ui,Segoe UI,sans-serif;
 }
 
 button,input,select,textarea{
@@ -45,2467 +39,2510 @@ button,input,select,textarea{
 }
 
 button{
+  border:0;
+  color:var(--text);
   cursor:pointer;
 }
 
-a{
-  color:inherit;
-  text-decoration:none;
+.hidden{
+  display:none!important;
 }
 
-/* ---------------- HEADER ---------------- */
+/* =========================
+   HEADER
+========================= */
 
 header{
+  height:66px;
+  display:flex;
+  align-items:center;
+  gap:15px;
+  padding:0 20px;
+  border-bottom:1px solid var(--line);
+  background:#06101eee;
+  backdrop-filter:blur(16px);
   position:sticky;
   top:0;
   z-index:100;
-  height:82px;
-  display:flex;
-  align-items:center;
-  border-bottom:1px solid rgba(255,255,255,.08);
-  background:rgba(4,9,18,.88);
-  backdrop-filter:blur(18px);
-}
-
-.header-inner{
-  width:min(1200px,calc(100% - 32px));
-  margin:auto;
-  display:flex;
-  align-items:center;
-  gap:18px;
 }
 
 .brand{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  min-width:210px;
-}
-
-.brand img{
-  width:54px;
-  height:54px;
-  object-fit:contain;
-  border-radius:12px;
-}
-
-.brand-title{
-  font-size:21px;
+  font-size:20px;
   font-weight:900;
-  letter-spacing:.5px;
 }
 
-.brand-sub{
-  color:#91a4c3;
-  font-size:10px;
-  letter-spacing:1.5px;
-  margin-top:3px;
+.brand span{
+  color:#70b5ff;
+}
+
+.sub{
+  color:var(--muted);
+  border-left:1px solid var(--line);
+  padding-left:15px;
 }
 
 nav{
+  margin-left:auto;
   display:flex;
-  align-items:center;
-  gap:4px;
-  flex:1;
+  gap:5px;
 }
 
-.nav-btn{
-  border:0;
+nav button{
   background:transparent;
-  color:#a9b8d0;
-  padding:12px 14px;
-  border-radius:12px;
-  font-weight:700;
+  padding:9px 11px;
+  border-radius:8px;
 }
 
-.nav-btn:hover,
-.nav-btn.active{
-  color:white;
-  background:rgba(255,255,255,.07);
+nav button:hover{
+  background:#132b45;
 }
 
-.header-right{
-  display:flex;
-  align-items:center;
-  gap:8px;
+.fps{
+  color:#62e5a2;
+  background:#102c25;
+  border:1px solid #205846;
+  border-radius:8px;
+  padding:7px 9px;
 }
 
-.fps-pill{
-  border:1px solid rgba(53,215,255,.28);
-  background:rgba(53,215,255,.08);
-  color:#7de7ff;
-  padding:9px 12px;
-  border-radius:12px;
-  font-size:13px;
-  font-weight:800;
-  white-space:nowrap;
+.upgrade{
+  background:#382650;
+  padding:8px 11px;
+  border-radius:8px;
 }
 
-.outline-btn,
-.primary-btn{
-  border-radius:13px;
-  padding:11px 16px;
+.avatar,
+.bigAvatar{
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:linear-gradient(135deg,#318cff,#a45cff);
   font-weight:900;
 }
 
-.outline-btn{
-  border:1px solid #31415e;
-  background:transparent;
-  color:white;
+.avatar{
+  width:34px;
+  height:34px;
 }
 
-.primary-btn{
-  border:0;
-  background:linear-gradient(135deg,#55b9ff,#38d7ef);
-  color:#03101b;
-}
-
-.outline-btn:hover{
-  background:rgba(255,255,255,.07);
-}
-
-.primary-btn:hover{
-  filter:brightness(1.08);
-}
-
-/* ---------------- PAGE ---------------- */
+/* =========================
+   GENERAL
+========================= */
 
 main{
-  width:min(1200px,calc(100% - 32px));
+  max-width:1500px;
   margin:auto;
-  padding:55px 0 80px;
+  padding:20px;
 }
 
-.hero{
-  display:grid;
-  grid-template-columns:1.15fr .85fr;
-  gap:55px;
-  align-items:center;
-  min-height:500px;
-}
-
-.kicker{
-  color:#4edfff;
-  font-size:12px;
-  font-weight:900;
-  letter-spacing:2px;
-  margin-bottom:18px;
-}
-
-.hero h1{
-  margin:0;
-  font-size:clamp(58px,8vw,92px);
-  line-height:.91;
-  letter-spacing:-5px;
-}
-
-.hero p{
-  color:#91acd2;
-  font-size:19px;
-  line-height:1.55;
-  max-width:700px;
-}
-
-.hero-actions{
-  display:flex;
-  gap:12px;
-  margin-top:26px;
-  flex-wrap:wrap;
-}
-
-.hero-card{
-  min-height:365px;
-  border:1px solid #263b60;
-  background:
-    radial-gradient(circle at 50% 35%,rgba(65,145,255,.22),transparent 45%),
-    linear-gradient(145deg,#11284a,#0b1427);
-  border-radius:30px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:45px;
-  box-shadow:0 25px 80px rgba(0,0,0,.28);
-}
-
-.hero-card img{
-  width:min(100%,270px);
-  border-radius:20px;
-}
-
-.section{
-  margin-top:50px;
-}
-
-.section-head{
+.toolbar{
   display:flex;
   justify-content:space-between;
-  align-items:end;
   gap:15px;
-  margin-bottom:20px;
+  align-items:center;
+  margin-bottom:12px;
 }
 
-.section-kicker{
-  color:#42dbff;
-  font-size:11px;
-  font-weight:900;
-  letter-spacing:2px;
-}
-
-.section h2{
-  margin:5px 0 0;
-  font-size:34px;
+h1,h2,h3{
+  margin:0 0 6px;
 }
 
 .muted{
   color:var(--muted);
 }
 
-/* ---------------- CARDS ---------------- */
+.panel{
+  background:#091727ee;
+  border:1px solid var(--line);
+  border-radius:11px;
+  overflow:hidden;
+}
+
+/* =========================
+   ADVANCED STUDIO
+========================= */
 
 .grid{
   display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:18px;
+  grid-template-columns:250px 1fr 290px;
+  gap:11px;
 }
 
-.card{
-  border:1px solid var(--line);
-  background:linear-gradient(145deg,rgba(18,32,55,.88),rgba(7,14,26,.95));
-  border-radius:20px;
-  padding:18px;
-  transition:.2s ease;
+.panelhead{
+  padding:11px 13px;
+  border-bottom:1px solid var(--line);
+  font-weight:800;
 }
 
-.card:hover{
-  transform:translateY(-3px);
-  border-color:#3c5d8b;
-}
-
-.game-thumb{
-  height:150px;
-  border-radius:15px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:35px;
-  font-weight:900;
-  background:
-    radial-gradient(circle at 50% 30%,rgba(75,180,255,.3),transparent 50%),
-    #101d33;
-  margin-bottom:15px;
-}
-
-.card h3{
-  margin:0 0 8px;
-}
-
-.card p{
-  color:#91a4c3;
-  line-height:1.5;
-}
-
-.tags{
-  display:flex;
-  gap:7px;
-  flex-wrap:wrap;
-  margin:12px 0;
-}
-
-.tag{
-  font-size:11px;
-  padding:6px 9px;
-  border-radius:999px;
-  background:#13233d;
-  border:1px solid #263b5d;
-  color:#9ec6ed;
-}
-
-.empty{
-  border:1px dashed #2b3d59;
-  border-radius:18px;
-  padding:35px;
-  text-align:center;
-  color:#8296b6;
-}
-
-/* ---------------- MODAL ---------------- */
-
-.modal-wrap{
-  position:fixed;
-  inset:0;
-  z-index:500;
-  display:none;
-  align-items:center;
-  justify-content:center;
-  padding:20px;
-  background:rgba(0,0,0,.72);
-  backdrop-filter:blur(12px);
-}
-
-.modal-wrap.show{
-  display:flex;
-}
-
-.modal{
-  width:min(510px,100%);
-  max-height:90vh;
+.assets,
+.props{
+  height:625px;
   overflow:auto;
-  border:1px solid #263b59;
-  background:#08101e;
-  border-radius:24px;
-  padding:28px;
-  box-shadow:0 30px 100px rgba(0,0,0,.6);
 }
 
-.modal h2{
-  margin:0 0 8px;
-  font-size:30px;
+.asset{
+  padding:9px 12px;
+  border-bottom:1px solid #142b42;
+  color:#cbdced;
+  cursor:pointer;
 }
 
-.modal-sub{
-  color:#91a4c3;
-  margin-bottom:25px;
+.asset:hover{
+  background:#112840;
 }
 
-.form-row{
-  display:grid;
-  gap:8px;
-  margin-bottom:16px;
-}
-
-label{
-  color:#9fb1ca;
-  font-size:13px;
-  font-weight:800;
-}
-
-input,select,textarea{
-  width:100%;
-  border:1px solid #273957;
-  background:#0c1729;
-  color:white;
-  border-radius:12px;
-  padding:13px 14px;
-  outline:none;
-}
-
-input:focus,
-select:focus,
-textarea:focus{
-  border-color:#45cfff;
-  box-shadow:0 0 0 3px rgba(53,215,255,.08);
-}
-
-textarea{
-  min-height:110px;
-  resize:vertical;
-}
-
-.form-error{
-  display:none;
-  color:#ff9ba6;
-  background:rgba(255,80,100,.08);
-  border:1px solid rgba(255,80,100,.22);
-  padding:12px;
-  border-radius:12px;
-  margin-bottom:14px;
-}
-
-.form-error.show{
-  display:block;
-}
-
-.modal-actions{
+.scene{
+  height:625px;
   display:flex;
-  gap:10px;
-  margin-top:20px;
+  flex-direction:column;
 }
 
-.modal-actions button{
-  flex:1;
-}
-
-.switch-auth{
-  text-align:center;
-  margin-top:18px;
-  color:#8499b8;
-  font-size:14px;
-}
-
-.link-btn{
-  background:none;
-  border:0;
-  color:#5fdfff;
-  font-weight:800;
-}
-
-/* ---------------- GAME ---------------- */
-
-.game-page{
-  max-width:1000px;
-  margin:auto;
-}
-
-.game-header{
+.tools{
   display:flex;
-  justify-content:space-between;
-  gap:20px;
-  align-items:flex-start;
+  gap:5px;
+  padding:9px;
+  border-bottom:1px solid var(--line);
+  overflow:auto;
 }
 
-.game-header h1{
-  margin:0;
-  font-size:42px;
+.tools button,
+.action{
+  background:#142d47;
+  padding:8px 10px;
+  border-radius:7px;
+  white-space:nowrap;
 }
 
-.game-meta{
-  color:#8ea5c5;
-  margin-top:10px;
+.tools button:hover,
+.action:hover{
+  filter:brightness(1.15);
 }
 
-.game-stage{
-  margin-top:25px;
-  border:1px solid #263b59;
-  border-radius:22px;
+.primary{
+  background:var(--blue);
+}
+
+.purple{
+  background:var(--purple);
+}
+
+.green{
+  background:#16885b;
+}
+
+/* =========================
+   3D VIEWPORT
+========================= */
+
+.viewport{
+  margin:11px;
+  height:370px;
+  position:relative;
   overflow:hidden;
-  background:#02060d;
+  border:1px solid #2b5578;
+  border-radius:9px;
+  background:
+    linear-gradient(
+      #67bbff 0 38%,
+      #77d878 38% 62%,
+      #376e4d 62%
+    );
 }
 
-.game-toolbar{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:12px 15px;
-  background:#0b1424;
-  border-bottom:1px solid #1c2b44;
-}
-
-.hud{
-  display:flex;
-  gap:12px;
-  color:#8de7ff;
-  font-size:12px;
-  font-weight:800;
-}
-
-canvas{
-  display:block;
+.mount{
+  position:absolute;
+  bottom:0;
   width:100%;
-  max-height:620px;
-  background:#07101d;
+  height:55%;
+  background:#285646;
+  clip-path:
+    polygon(
+      0 72%,
+      18% 38%,
+      35% 63%,
+      53% 16%,
+      72% 52%,
+      88% 28%,
+      100% 57%,
+      100% 100%,
+      0 100%
+    );
 }
 
-/* ---------------- PROFILE ---------------- */
-
-.profile-box{
-  max-width:800px;
-  margin:auto;
-  border:1px solid var(--line);
-  background:linear-gradient(145deg,#0e1a2e,#080f1c);
-  border-radius:24px;
-  padding:30px;
+.water{
+  position:absolute;
+  right:13%;
+  bottom:0;
+  width:18%;
+  height:44%;
+  background:#36a9df;
+  clip-path:
+    polygon(
+      40% 0,
+      100% 20%,
+      75% 100%,
+      0 100%,
+      20% 50%
+    );
 }
 
-.profile-top{
-  display:flex;
-  gap:20px;
-  align-items:center;
+.player{
+  position:absolute;
+  left:45%;
+  bottom:18%;
+  width:48px;
+  height:65px;
+  border-radius:10px;
+  background:#17324e;
 }
 
-.avatar{
-  width:80px;
-  height:80px;
+.player:before{
+  content:"";
+  position:absolute;
+  top:-20px;
+  left:9px;
+  width:30px;
+  height:30px;
   border-radius:50%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:30px;
-  font-weight:900;
-  background:linear-gradient(135deg,#55a8ff,#35d7ff);
-  color:#03101b;
+  background:#efbc91;
 }
 
-.profile-name{
-  font-size:28px;
-  font-weight:900;
+.coin{
+  position:absolute;
+  width:20px;
+  height:20px;
+  border-radius:50%;
+  background:var(--yellow);
+  box-shadow:0 0 18px #ffd24d;
 }
 
-.profile-grid{
+.c1{
+  left:25%;
+  top:35%;
+}
+
+.c2{
+  left:70%;
+  top:28%;
+}
+
+/* =========================
+   TIMELINE
+========================= */
+
+.timeline{
+  height:145px;
+  padding:8px 12px;
+  border-top:1px solid var(--line);
+  background:#071321;
+  overflow:auto;
+}
+
+.track{
   display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:12px;
-  margin-top:25px;
+  grid-template-columns:100px 1fr;
+  height:27px;
+  align-items:center;
+  min-width:600px;
+}
+
+.line{
+  height:4px;
+  background:#203c59;
+  position:relative;
+}
+
+.dot{
+  position:absolute;
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#54a8ff;
+  top:-2px;
+}
+
+/* =========================
+   PROPERTIES
+========================= */
+
+.prop{
+  padding:12px;
+  border-bottom:1px solid #173049;
+}
+
+.row{
+  display:flex;
+  gap:6px;
+  margin-top:8px;
+}
+
+.row input,
+.row select,
+.aiinput{
+  width:100%;
+  background:#071421;
+  color:white;
+  border:1px solid #294966;
+  border-radius:7px;
+  padding:8px;
+}
+
+/* =========================
+   RULES + AI
+========================= */
+
+.bottom{
+  display:grid;
+  grid-template-columns:1fr 320px;
+  gap:11px;
+  margin-top:11px;
+}
+
+.rules{
+  min-height:310px;
+}
+
+.rulebody{
+  display:grid;
+  grid-template-columns:105px 1fr 205px;
+  gap:9px;
+  padding:10px;
+}
+
+.palette{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.palette button{
+  padding:8px;
+  border-radius:7px;
+  text-align:left;
+}
+
+.when{
+  background:#1979c9;
+}
+
+.do{
+  background:#149363;
+}
+
+.control{
+  background:#8b57d9;
+}
+
+.var{
+  background:#d4a11f;
+  color:#111;
+}
+
+.logic{
+  background:#d55d78;
+}
+
+.blocks{
+  min-height:255px;
+  border:1px dashed #345875;
+  border-radius:8px;
+  padding:9px;
+}
+
+.block{
+  width:max-content;
+  max-width:100%;
+  padding:8px 10px;
+  border-radius:7px;
+  margin:6px 0;
+}
+
+.lib .suggest,
+.suggest{
+  padding:7px;
+  background:#10263e;
+  border:1px solid #244967;
+  border-radius:7px;
+  margin:6px 0;
+}
+
+.chat{
+  display:flex;
+  gap:6px;
+}
+
+.chat button{
+  background:var(--purple);
+  padding:0 12px;
+  border-radius:7px;
+}
+
+/* =========================
+   TOAST
+========================= */
+
+.status{
+  position:fixed;
+  right:16px;
+  bottom:16px;
+  background:#0d2137;
+  border:1px solid #315576;
+  border-radius:8px;
+  padding:10px 13px;
+  z-index:300;
+}
+
+/* =========================
+   CREATOR PROFILE
+========================= */
+
+.profile{
+  max-width:950px;
+  margin:auto;
+}
+
+.hero{
+  display:flex;
+  gap:16px;
+  align-items:center;
+  padding:20px;
+}
+
+.bigAvatar{
+  width:82px;
+  height:82px;
+  font-size:28px;
+}
+
+.stats{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:12px;
 }
 
 .stat{
-  border:1px solid #233652;
-  border-radius:15px;
-  padding:18px;
-  background:#0a1424;
-}
-
-.stat strong{
-  display:block;
-  font-size:22px;
-}
-
-/* ---------------- CREATE ---------------- */
-
-.create-box{
-  max-width:850px;
-  margin:auto;
+  background:#0b1d31;
   border:1px solid var(--line);
-  border-radius:24px;
-  padding:28px;
-  background:#091322;
+  padding:10px 16px;
+  border-radius:8px;
 }
 
-.creator-note{
-  border:1px solid #28405f;
-  background:#0c1b30;
-  padding:15px;
-  border-radius:14px;
-  color:#9eb4d1;
-  margin-bottom:22px;
-}
-
-.editor-tools{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  margin:15px 0;
-}
-
-.object-btn{
-  border:1px solid #29415f;
-  background:#0e1c30;
-  color:white;
-  padding:9px 12px;
-  border-radius:10px;
-}
-
-.object-list{
-  display:grid;
-  gap:8px;
-}
-
-.object-row{
+.game{
   display:flex;
   justify-content:space-between;
-  border:1px solid #223652;
-  background:#0b1728;
-  border-radius:12px;
-  padding:12px;
+  gap:10px;
+  padding:13px;
+  border-bottom:1px solid #17304a;
 }
 
-.small-btn{
-  border:1px solid #354b68;
-  background:transparent;
-  color:white;
-  border-radius:8px;
-  padding:5px 9px;
+.tag{
+  background:#132d47;
+  border-radius:6px;
+  padding:4px 7px;
+  font-size:12px;
+  color:#a9c7e3;
 }
 
-/* ---------------- TRANSITION ---------------- */
-
-#transition{
-  position:fixed;
-  inset:0;
-  z-index:1000;
-  display:none;
-  align-items:center;
-  justify-content:center;
-  background:#030711;
+.rating{
+  padding:20px;
+  margin-top:11px;
 }
 
-#transition.show{
-  display:flex;
+.stars button{
+  background:none;
+  font-size:29px;
+  color:#536b83;
 }
 
-.transition-text{
-  font-size:76px;
-  font-weight:1000;
-  letter-spacing:-5px;
-  color:white;
+.stars .on{
+  color:var(--yellow);
 }
 
-.transition-text span{
-  color:#43ddff;
-}
+/* =========================
+   MOBILE
+========================= */
 
-/* ---------------- TOAST ---------------- */
-
-#toast{
-  position:fixed;
-  right:20px;
-  bottom:20px;
-  z-index:900;
-  max-width:360px;
-  padding:14px 17px;
-  border:1px solid #2b4263;
-  background:#0c1729;
-  color:white;
-  border-radius:14px;
-  box-shadow:0 20px 60px rgba(0,0,0,.45);
-  display:none;
-}
-
-#toast.show{
-  display:block;
-}
-
-/* ---------------- FOOTER ---------------- */
-
-footer{
-  border-top:1px solid rgba(255,255,255,.08);
-  padding:30px 16px;
-  color:#7186a5;
-  text-align:center;
-}
-
-footer a{
-  color:#53dfff;
-}
-
-/* ---------------- MOBILE ---------------- */
-
-@media(max-width:900px){
-  .hero{
-    grid-template-columns:1fr;
-  }
+@media(max-width:1100px){
 
   .grid{
-    grid-template-columns:1fr 1fr;
+    grid-template-columns:210px 1fr;
   }
 
-  .brand{
-    min-width:auto;
-  }
-
-  .brand-title{
-    font-size:17px;
-  }
-
-  nav{
-    overflow-x:auto;
-  }
-
-  .fps-pill{
+  .props{
     display:none;
   }
+
+  .bottom{
+    grid-template-columns:1fr;
+  }
+
 }
 
-@media(max-width:650px){
-  header{
-    height:auto;
-    padding:10px 0;
-  }
-
-  .header-inner{
-    flex-wrap:wrap;
-  }
-
-  .brand{
-    width:100%;
-  }
+@media(max-width:720px){
 
   nav{
-    order:3;
-    width:100%;
-  }
-
-  .header-right{
-    margin-left:auto;
+    display:none;
   }
 
   .grid{
     grid-template-columns:1fr;
   }
 
-  .hero h1{
-    font-size:58px;
+  .assets{
+    height:200px;
   }
 
-  .game-header{
+  .scene{
+    height:560px;
+  }
+
+  .rulebody{
+    grid-template-columns:1fr;
+  }
+
+  .toolbar{
+    align-items:flex-start;
     flex-direction:column;
   }
 
-  .profile-grid{
-    grid-template-columns:1fr;
-  }
 }
 </style>
 </head>
 
 <body>
 
+<!-- =========================================================
+     METGAMES HEADER
+========================================================= -->
+
 <header>
-  <div class="header-inner">
 
-    <a class="brand" href="#home" onclick="navigate('home');return false;">
-      <img src="image.png" alt="MetGames">
-      <div>
-        <div class="brand-title">METGAMES</div>
-        <div class="brand-sub">A METXON PRODUCT</div>
-      </div>
-    </a>
-
-    <nav>
-      <button class="nav-btn" data-page="home" onclick="navigate('home')">Home</button>
-      <button class="nav-btn" data-page="play" onclick="navigate('play')">Play</button>
-      <button class="nav-btn" data-page="trailers" onclick="navigate('trailers')">Watch Trailers</button>
-      <button class="nav-btn" data-page="create" onclick="navigate('create')">Create</button>
-      <button class="nav-btn" data-page="profile" onclick="navigate('profile')">Profile</button>
-    </nav>
-
-    <div class="header-right">
-      <div class="fps-pill">FPS <span id="headerFps">--</span></div>
-      <button class="outline-btn" id="loginBtn" onclick="openLogin()">Log in</button>
-      <button class="primary-btn" id="joinBtn" onclick="openJoin()">Join</button>
-      <button class="outline-btn" id="logoutBtn" onclick="logout()" style="display:none">Log out</button>
-    </div>
-
+  <div class="brand">
+    ◈ MET<span>GAMES</span>
   </div>
+
+  <div class="sub">
+    Advanced Studio
+  </div>
+
+  <nav>
+
+    <button onclick="studio()">
+      Create
+    </button>
+
+    <button onclick="discover()">
+      Play
+    </button>
+
+    <button onclick="profile('DemoCreator')">
+      Profile
+    </button>
+
+    <button onclick="toast('Trailer center')">
+      Watch Trailers
+    </button>
+
+  </nav>
+
+  <span class="fps">
+    ● 60 FPS
+  </span>
+
+  <button
+    class="upgrade"
+    onclick="toast('METPAY uses JP. MetGames does not store payment passwords.')"
+  >
+    ↑ Upgrade
+  </button>
+
+  <div class="avatar">
+    M
+  </div>
+
 </header>
 
-<main id="app"></main>
 
-<footer>
-  <div>© 2026 METXON / METGAMES. All rights reserved.</div>
-  <div style="margin-top:8px">
-    Original METXON website:
-    <a href="https://nidhilarthicknet.github.io/metxon/" target="_blank">
-      nidhilarthicknet.github.io/metxon/
-    </a>
-  </div>
-</footer>
+<main>
 
-<!-- LOGIN -->
-<div class="modal-wrap" id="loginModal">
-  <div class="modal">
-    <h2>Log in</h2>
-    <div class="modal-sub">Log in to play and create games.</div>
+<!-- =========================================================
+     ADVANCED STUDIO
+========================================================= -->
 
-    <div class="form-error" id="loginError"></div>
+<section id="studio">
 
-    <div class="form-row">
-      <label>Username</label>
-      <input id="loginUsername" autocomplete="username" maxlength="24">
+  <div class="toolbar">
+
+    <div>
+
+      <h1>
+        Advanced Studio
+      </h1>
+
+      <div class="muted">
+        3D scene • visual Rules • Blox Code • MEX AI IDEA
+      </div>
+
     </div>
 
-    <div class="form-row">
-      <label>Password</label>
-      <input id="loginPassword" type="password" autocomplete="current-password">
-    </div>
+    <div>
 
-    <div class="modal-actions">
-      <button class="outline-btn" onclick="closeModals()">Cancel</button>
-      <button class="primary-btn" id="loginSubmit" onclick="login()">Log in</button>
-    </div>
-
-    <div class="switch-auth">
-      New to MetGames?
-      <button class="link-btn" onclick="switchToJoin()">Join</button>
-    </div>
-  </div>
-</div>
-
-<!-- JOIN -->
-<div class="modal-wrap" id="joinModal">
-  <div class="modal">
-    <h2>Join MetGames</h2>
-    <div class="modal-sub">Create an account to play and build.</div>
-
-    <div class="form-error" id="joinError"></div>
-
-    <div class="form-row">
-      <label>Username</label>
-      <input
-        id="joinUsername"
-        autocomplete="username"
-        maxlength="24"
-        placeholder="letters, numbers and _"
+      <button
+        class="action"
+        onclick="saveDraft()"
       >
-    </div>
+        Save
+      </button>
 
-    <div class="form-row">
-      <label>Display name</label>
-      <input id="joinDisplayName" maxlength="80" placeholder="Your display name">
-    </div>
-
-    <div class="form-row">
-      <label>Age category</label>
-      <select id="joinAge">
-        <option value="8_12">8–12</option>
-        <option value="13_15">13–15</option>
-        <option value="16_18">16–18</option>
-        <option value="18_plus">18+</option>
-      </select>
-    </div>
-
-    <div class="form-row">
-      <label>Password</label>
-      <input
-        id="joinPassword"
-        type="password"
-        autocomplete="new-password"
-        minlength="8"
-        placeholder="At least 8 characters"
+      <button
+        class="action primary"
+        onclick="testGame()"
       >
+        ▶ Test
+      </button>
+
+      <button
+        class="action purple"
+        onclick="publish()"
+      >
+        Publish
+      </button>
+
     </div>
 
-    <div class="modal-actions">
-      <button class="outline-btn" onclick="closeModals()">Cancel</button>
-      <button class="primary-btn" id="joinSubmit" onclick="join()">Create account</button>
-    </div>
-
-    <div class="switch-auth">
-      Already have an account?
-      <button class="link-btn" onclick="switchToLogin()">Log in</button>
-    </div>
   </div>
-</div>
 
-<!-- TRANSITION -->
-<div id="transition">
-  <div class="transition-text">
-    <span id="transitionMet">MET</span><span id="transitionXon" style="display:none">XON</span>
+
+  <div class="grid">
+
+    <!-- =====================================================
+         ASSETS
+    ====================================================== -->
+
+    <aside class="panel assets">
+
+      <div class="panelhead">
+        Assets
+      </div>
+
+      <div class="asset">
+        🔎 Search assets...
+      </div>
+
+      <div class="asset">
+        🧍 Characters
+      </div>
+
+      <div class="asset">
+        🧱 3D Models
+      </div>
+
+      <div class="asset">
+        🌳 Nature
+      </div>
+
+      <div class="asset">
+        🏗️ Buildings
+      </div>
+
+      <div class="asset">
+        🚗 Vehicles
+      </div>
+
+      <div class="asset">
+        🖼️ Textures
+      </div>
+
+      <div class="asset">
+        🔊 Audio
+      </div>
+
+      <div class="asset">
+        🎞️ Animations
+      </div>
+
+      <div class="asset">
+        💡 Materials
+      </div>
+
+      <div class="asset">
+        ◫ UI Elements
+      </div>
+
+
+      <div class="panelhead">
+        Scene Hierarchy
+      </div>
+
+      <div
+        class="asset"
+        onclick="selectObj('Player')"
+      >
+        🧍 Player
+      </div>
+
+      <div
+        class="asset"
+        onclick="selectObj('Blue Block')"
+      >
+        🟦 Blue Block
+      </div>
+
+      <div
+        class="asset"
+        onclick="selectObj('Ball')"
+      >
+        ⚽ Ball
+      </div>
+
+      <div
+        class="asset"
+        onclick="selectObj('Coin')"
+      >
+        🟡 Coin
+      </div>
+
+    </aside>
+
+
+    <!-- =====================================================
+         GAME SCENE
+    ====================================================== -->
+
+    <section class="panel scene">
+
+      <div class="tools">
+
+        <button>
+          ▣ Objects
+        </button>
+
+        <button>
+          ⛰ Terrain
+        </button>
+
+        <button>
+          ☀ Lighting
+        </button>
+
+        <button>
+          ◉ Camera
+        </button>
+
+        <button>
+          ♫ Audio
+        </button>
+
+        <button>
+          ◫ UI
+        </button>
+
+        <button>
+          ⚛ Physics
+        </button>
+
+        <button>
+          🏃 Animation
+        </button>
+
+        <button onclick="openAI()">
+          ✦ AI
+        </button>
+
+        <button>
+          ⌘ Blox Code
+        </button>
+
+      </div>
+
+
+      <div class="viewport">
+
+        <div class="mount"></div>
+
+        <div class="water"></div>
+
+        <div class="player"></div>
+
+        <div class="coin c1"></div>
+
+        <div class="coin c2"></div>
+
+      </div>
+
+
+      <!-- TIMELINE -->
+
+      <div class="timeline">
+
+        <b>
+          Timeline
+        </b>
+
+        <span class="muted">
+          0s — 30s
+        </span>
+
+
+        <div class="track">
+
+          <b>
+            Player
+          </b>
+
+          <div class="line">
+
+            <i
+              class="dot"
+              style="left:0%"
+            ></i>
+
+            <i
+              class="dot"
+              style="left:30%"
+            ></i>
+
+            <i
+              class="dot"
+              style="left:65%"
+            ></i>
+
+            <i
+              class="dot"
+              style="left:90%"
+            ></i>
+
+          </div>
+
+        </div>
+
+
+        <div class="track">
+
+          <b>
+            Position
+          </b>
+
+          <div class="line">
+
+            <i
+              class="dot"
+              style="left:10%"
+            ></i>
+
+            <i
+              class="dot"
+              style="left:45%"
+            ></i>
+
+            <i
+              class="dot"
+              style="left:80%"
+            ></i>
+
+          </div>
+
+        </div>
+
+
+        <div class="track">
+
+          <b>
+            Blue Block
+          </b>
+
+          <div class="line">
+
+            <i
+              class="dot"
+              style="left:20%"
+            ></i>
+
+            <i
+              class="dot"
+              style="left:70%"
+            ></i>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         PROPERTIES
+    ====================================================== -->
+
+    <aside class="panel props">
+
+      <div class="panelhead">
+
+        Properties —
+        <span id="selected">
+          Player
+        </span>
+
+      </div>
+
+
+      <div class="prop">
+
+        <b>
+          Transform
+        </b>
+
+        <div class="row">
+
+          <input value="12.5">
+
+          <input value="2">
+
+          <input value="-7.3">
+
+        </div>
+
+        <div class="row">
+
+          <input value="0">
+
+          <input value="180">
+
+          <input value="0">
+
+        </div>
+
+      </div>
+
+
+      <div class="prop">
+
+        <b>
+          Appearance
+        </b>
+
+        <div class="row">
+
+          <select>
+
+            <option>
+              Character
+            </option>
+
+            <option>
+              Cube
+            </option>
+
+            <option>
+              Sphere
+            </option>
+
+          </select>
+
+
+          <select>
+
+            <option>
+              Default
+            </option>
+
+            <option>
+              Glass
+            </option>
+
+            <option>
+              Metal
+            </option>
+
+          </select>
+
+        </div>
+
+      </div>
+
+
+      <div class="prop">
+
+        <b>
+          Physics
+        </b>
+
+        <div class="row">
+
+          <label>
+
+            Collidable
+
+            <input
+              type="checkbox"
+              checked
+            >
+
+          </label>
+
+        </div>
+
+      </div>
+
+
+      <div class="prop">
+
+        <b>
+          Animation
+        </b>
+
+        <div class="row">
+
+          <select>
+
+            <option>
+              Idle
+            </option>
+
+            <option>
+              Run
+            </option>
+
+            <option>
+              Jump
+            </option>
+
+          </select>
+
+        </div>
+
+      </div>
+
+
+      <div class="prop">
+
+        <b>
+          Scripts / Events
+        </b>
+
+        <button
+          class="action"
+          style="width:100%;margin-top:8px"
+          onclick="addExample()"
+        >
+          ⌘ Edit with Blox Code
+        </button>
+
+      </div>
+
+    </aside>
+
   </div>
-</div>
 
-<div id="toast"></div>
+
+  <!-- =======================================================
+       RULES + MEX AI
+  ======================================================== -->
+
+  <div class="bottom">
+
+
+    <!-- RULES -->
+
+    <section class="panel rules">
+
+      <div class="panelhead">
+
+        Rules —
+        <span id="ruleObj">
+          Player
+        </span>
+
+        <span class="muted">
+          Each object has its own rules.
+        </span>
+
+      </div>
+
+
+      <div class="rulebody">
+
+
+        <!-- BLOCK PALETTE -->
+
+        <div class="palette">
+
+          <button
+            class="when"
+            onclick="block('when')"
+          >
+            WHEN
+          </button>
+
+          <button
+            class="do"
+            onclick="block('do')"
+          >
+            DO
+          </button>
+
+          <button
+            class="control"
+            onclick="block('control')"
+          >
+            FOREVER / REPEAT
+          </button>
+
+          <button
+            class="var"
+            onclick="block('var')"
+          >
+            VARIABLE
+          </button>
+
+          <button
+            class="logic"
+            onclick="block('logic')"
+          >
+            IF / ELSE
+          </button>
+
+        </div>
+
+
+        <!-- CURRENT RULES -->
+
+        <div
+          class="blocks"
+          id="blocks"
+        >
+
+          <div class="block when">
+
+            WHEN ball touches
+            <b>
+              Blue Block
+            </b>
+
+          </div>
+
+
+          <div class="block do">
+
+            DO release
+            <b>
+              +
+            </b>
+
+          </div>
+
+
+          <div class="block control">
+
+            FOREVER →
+            move forward 5 →
+            wait 1 second
+
+          </div>
+
+        </div>
+
+
+        <!-- RULE LIBRARY -->
+
+        <div class="lib">
+
+          <b>
+            Rules Library
+          </b>
+
+          <div class="suggest">
+            When game starts
+          </div>
+
+          <div class="suggest">
+            When key is pressed
+          </div>
+
+          <div class="suggest">
+            When object touches...
+          </div>
+
+          <div class="suggest">
+            When score reaches...
+          </div>
+
+          <div class="suggest">
+            Create object
+          </div>
+
+          <div class="suggest">
+            Play animation
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- MEX AI -->
+
+    <section
+      class="panel"
+      id="ai"
+    >
+
+      <div class="panelhead">
+
+        ✦ MEX AI — IDEA
+
+      </div>
+
+
+      <div style="padding:12px">
+
+        <div class="muted">
+
+          Tell MEX AI what you want.
+
+          It can turn natural language into a
+          visual block command.
+
+          <br><br>
+
+          Example:
+
+          <b>
+            "When a ball touches a blue block,
+            release +."
+          </b>
+
+        </div>
+
+
+        <div
+          class="chat"
+          style="margin-top:10px"
+        >
+
+          <input
+            class="aiinput"
+            id="aiInput"
+            placeholder="Describe the command..."
+          >
+
+          <button
+            onclick="mexAI()"
+          >
+            Generate
+          </button>
+
+        </div>
+
+
+        <button
+          class="suggest"
+          style="width:100%;text-align:left"
+          onclick="exampleAI()"
+        >
+
+          Create:
+          ball touches blue block
+          →
+          release +
+
+        </button>
+
+
+        <div
+          id="aiResult"
+        ></div>
+
+      </div>
+
+    </section>
+
+  </div>
+
+</section>
+
+
+<!-- =========================================================
+     CREATOR PROFILE
+========================================================= -->
+
+<section
+  id="profile"
+  class="profile hidden"
+>
+
+  <div class="panel hero">
+
+    <div
+      class="bigAvatar"
+      id="pavatar"
+    >
+      D
+    </div>
+
+
+    <div style="flex:1">
+
+      <h1 id="pname">
+        DemoCreator
+      </h1>
+
+      <div class="muted">
+
+        Creator •
+        <span id="page">
+          13–15
+        </span>
+
+      </div>
+
+
+      <div class="stats">
+
+
+        <div class="stat">
+
+          <b id="created">
+            12
+          </b>
+
+          <br>
+
+          <span class="muted">
+            Games created
+          </span>
+
+        </div>
+
+
+        <div class="stat">
+
+          <b id="played">
+            1,248
+          </b>
+
+          <br>
+
+          <span class="muted">
+            Games played
+          </span>
+
+        </div>
+
+
+        <div class="stat">
+
+          <b id="followers">
+            326
+          </b>
+
+          <br>
+
+          <span class="muted">
+            Followers
+          </span>
+
+        </div>
+
+
+      </div>
+
+    </div>
+
+
+    <button
+      id="follow"
+      class="action primary"
+      onclick="follow()"
+    >
+      Follow
+    </button>
+
+  </div>
+
+
+  <!-- CREATOR'S GAMES -->
+
+  <div
+    class="panel"
+    style="margin-top:11px"
+  >
+
+    <div class="panelhead">
+
+      Games by this creator
+
+    </div>
+
+
+    <div class="game">
+
+      <div>
+
+        <b>
+          Adventure Island
+        </b>
+
+        <span class="tag">
+          3D
+        </span>
+
+      </div>
+
+      <button class="action">
+        Play
+      </button>
+
+    </div>
+
+
+    <div class="game">
+
+      <div>
+
+        <b>
+          Coin Rush
+        </b>
+
+        <span class="tag">
+          2D
+        </span>
+
+      </div>
+
+      <button class="action">
+        Play
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <!-- CREATOR RATING -->
+
+  <div class="panel rating">
+
+    <h2>
+      Rate this creator
+    </h2>
+
+    <div class="muted">
+
+      Ratings are available at the end
+      of the creator profile.
+
+    </div>
+
+
+    <div
+      class="stars"
+      id="stars"
+    ></div>
+
+
+    <button
+      class="action purple"
+      onclick="rate()"
+    >
+      Submit rating
+    </button>
+
+
+    <div
+      id="ratingMsg"
+      class="muted"
+    ></div>
+
+  </div>
+
+</section>
+
+
+<!-- =========================================================
+     DISCOVER / PLAY
+========================================================= -->
+
+<section
+  id="discover"
+  class="hidden"
+>
+
+  <h1>
+    Play
+  </h1>
+
+  <p class="muted">
+
+    Public discovery is available
+    without login.
+
+    Playing requires login.
+
+  </p>
+
+
+  <div
+    class="panel"
+    id="games"
+  ></div>
+
+</section>
+
+</main>
+
+
+<div
+  id="toast"
+  class="status hidden"
+></div>
+
 
 <script>
-/* =========================================================
-   METGAMES CONFIG
-   ========================================================= */
 
-const SUPABASE_URL = "https://xnnnxinsnedjafltsuqo.supabase.co";
-const SUPABASE_KEY = "sb_publishable_86rJNEFS_sOXfsZZ6gr4ow_sLngjj_i";
+/* ============================================================
+   SUPABASE
+============================================================ */
 
-const { createClient } = supabase;
+const SUPABASE_URL =
+  'https://xnnnxinsnedjafltsuqo.supabase.co';
 
-const db = createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY,
-  {
-    auth:{
-      persistSession:false,
-      autoRefreshToken:false,
-      detectSessionInUrl:false
+const SUPABASE_KEY =
+  'sb_publishable_86rJNEFS_sOXfsZZ6gr4ow_sLngjj_i';
+
+
+const db =
+  window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY,
+    {
+      auth:{
+        persistSession:false,
+        autoRefreshToken:true,
+        detectSessionInUrl:false
+      }
     }
-  }
-);
+  );
 
-/* =========================================================
+
+/* ============================================================
    STATE
-   ========================================================= */
+============================================================ */
 
-let currentUser = null;
-let currentProfile = null;
-let currentPage = "home";
-let gamesCache = [];
-let activeGame = null;
-let animationId = null;
-let fpsFrames = 0;
-let fpsLast = performance.now();
+let obj = 'Player';
 
-/* =========================================================
-   HELPERS
-   ========================================================= */
+let creator = 'DemoCreator';
 
-function esc(value){
-  return String(value ?? "")
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
-}
+let stars = 0;
 
-function ageLabel(value){
-  return ({
-    "8_12":"8–12",
-    "13_15":"13–15",
-    "16_18":"16–18",
-    "18_plus":"18+"
-  })[value] || value || "—";
-}
+let isFollowing = false;
 
-function friendlyError(error, fallback){
-  const msg = String(error?.message || error || "");
 
-  if(
-    msg.includes("Failed to fetch") ||
-    msg.includes("NetworkError") ||
-    msg.includes("fetch")
-  ){
-    return "MetGames could not connect to the server. Please check your internet connection and try again.";
-  }
+/* ============================================================
+   UTILITY
+============================================================ */
 
-  if(msg.includes("WEEKLY_GAME_LIMIT")){
-    return "You have reached the Free Creator limit of 5 games this week.";
-  }
+const esc = s =>
+  String(s).replace(
+    /[&<>"']/g,
+    c => ({
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#39;'
+    }[c])
+  );
 
-  if(msg.includes("DAILY_PLAY_LIMIT")){
-    return "You have reached today's free play limit for this type of game.";
-  }
 
-  if(msg.includes("LOGIN_REQUIRED")){
-    return "Please log in first.";
-  }
+function toast(message,bad=false){
 
-  return fallback || "MetGames could not complete that request.";
-}
+  const x =
+    document.getElementById('toast');
 
-function toast(message){
-  const el = document.getElementById("toast");
-  el.textContent = message;
-  el.classList.add("show");
+  x.textContent = message;
 
-  clearTimeout(window.__toastTimer);
-  window.__toastTimer = setTimeout(()=>{
-    el.classList.remove("show");
-  },3500);
-}
+  x.className = 'status';
 
-function setError(id,message){
-  const el = document.getElementById(id);
-  if(!el) return;
+  x.style.color =
+    bad
+      ? '#ff899b'
+      : '#70edac';
 
-  el.textContent = message || "";
-  el.classList.toggle("show",!!message);
-}
+  clearTimeout(window.tt);
 
-function closeModals(){
-  document.querySelectorAll(".modal-wrap").forEach(x=>x.classList.remove("show"));
-}
-
-function openLogin(){
-  closeModals();
-  setError("loginError","");
-  document.getElementById("loginModal").classList.add("show");
-}
-
-function openJoin(){
-  closeModals();
-  setError("joinError","");
-  document.getElementById("joinModal").classList.add("show");
-}
-
-function switchToJoin(){
-  closeModals();
-  openJoin();
-}
-
-function switchToLogin(){
-  closeModals();
-  openLogin();
-}
-
-/* =========================================================
-   MET → XON TRANSITION
-   ========================================================= */
-
-async function transition(callback){
-  const overlay = document.getElementById("transition");
-  const met = document.getElementById("transitionMet");
-  const xon = document.getElementById("transitionXon");
-
-  overlay.classList.add("show");
-  met.style.display = "inline";
-  xon.style.display = "none";
-
-  await wait(250);
-
-  if(callback){
-    await callback();
-  }
-
-  await wait(350);
-
-  met.style.display = "none";
-  xon.style.display = "inline";
-
-  await wait(300);
-
-  overlay.classList.remove("show");
-}
-
-function wait(ms){
-  return new Promise(resolve=>setTimeout(resolve,ms));
-}
-
-/* =========================================================
-   AUTH
-   ========================================================= */
-
-async function join(){
-
-  setError("joinError","");
-
-  const username = document.getElementById("joinUsername").value
-    .trim()
-    .toLowerCase();
-
-  const displayName = document.getElementById("joinDisplayName").value.trim();
-
-  const ageCategory = document.getElementById("joinAge").value;
-
-  const password = document.getElementById("joinPassword").value;
-
-  if(!/^[a-z0-9_]{3,24}$/.test(username)){
-    setError(
-      "joinError",
-      "Username must be 3–24 characters and use only letters, numbers or underscores."
+  window.tt =
+    setTimeout(
+      () => x.classList.add('hidden'),
+      3500
     );
+}
+
+
+/* ============================================================
+   PAGE NAVIGATION
+============================================================ */
+
+function hide(){
+
+  [
+    'studio',
+    'profile',
+    'discover'
+  ].forEach(
+    id =>
+      document
+        .getElementById(id)
+        .classList.add('hidden')
+  );
+
+}
+
+
+function studio(){
+
+  hide();
+
+  document
+    .getElementById('studio')
+    .classList.remove('hidden');
+
+}
+
+
+function discover(){
+
+  hide();
+
+  document
+    .getElementById('discover')
+    .classList.remove('hidden');
+
+  loadGames();
+
+}
+
+
+/* ============================================================
+   OBJECT SELECTION
+============================================================ */
+
+function selectObj(x){
+
+  obj = x;
+
+  document
+    .getElementById('selected')
+    .textContent = x;
+
+  document
+    .getElementById('ruleObj')
+    .textContent = x;
+
+  toast(
+    x +
+    ' selected — its properties and rules are active.'
+  );
+
+}
+
+
+/* ============================================================
+   VISUAL BLOCK SYSTEM
+============================================================ */
+
+function block(type){
+
+  const messages = {
+
+    when:
+      'WHEN ball touches Blue Block',
+
+    do:
+      'DO release +',
+
+    control:
+      'FOREVER → repeat action',
+
+    var:
+      'VARIABLE score = score + 1',
+
+    logic:
+      'IF touching Blue Block → DO release +'
+
+  };
+
+
+  const d =
+    document.createElement('div');
+
+  d.className =
+    'block ' + type;
+
+  d.textContent =
+    messages[type];
+
+  document
+    .getElementById('blocks')
+    .appendChild(d);
+
+}
+
+
+/* ============================================================
+   BLOX CODE EXAMPLE
+============================================================ */
+
+function addExample(){
+
+  block('when');
+
+  block('do');
+
+  toast(
+    'Blox Code example added.'
+  );
+
+}
+
+
+/* ============================================================
+   MEX AI
+============================================================ */
+
+function openAI(){
+
+  document
+    .getElementById('ai')
+    .scrollIntoView({
+      behavior:'smooth'
+    });
+
+  document
+    .getElementById('aiInput')
+    .focus();
+
+}
+
+
+function exampleAI(){
+
+  document
+    .getElementById('aiInput')
+    .value =
+      'When a ball touches a blue block, release +';
+
+  mexAI();
+
+}
+
+
+async function mexAI(){
+
+  const prompt =
+    document
+      .getElementById('aiInput')
+      .value
+      .trim();
+
+
+  if(!prompt){
+
+    toast(
+      'Enter a command first.',
+      true
+    );
+
     return;
+
   }
 
-  if(password.length < 8){
-    setError("joinError","Password must be at least 8 characters.");
-    return;
-  }
 
-  const button = document.getElementById("joinSubmit");
-  button.disabled = true;
-  button.textContent = "Creating...";
+  const output =
+    document
+      .getElementById('aiResult');
+
+
+  output.innerHTML =
+    '<div class="suggest">' +
+    'MEX AI is thinking...' +
+    '</div>';
+
 
   try{
 
-    const {data,error} = await db.functions.invoke(
-      "metgames-auth",
-      {
-        body:{
-          action:"signup",
-          username,
-          displayName:displayName || username,
-          ageCategory,
-          password
+    /*
+      IMPORTANT:
+
+      The OpenAI secret key must NOT
+      be placed in this HTML file.
+
+      This calls the Supabase Edge Function:
+
+        mex-ai
+
+      The Edge Function should contain
+      the OpenAI secret key server-side.
+    */
+
+    const result =
+      await db.functions.invoke(
+        'mex-ai',
+        {
+          body:{
+            action:'rule',
+            prompt:prompt,
+            selected_object:obj
+          }
         }
-      }
-    );
+      );
 
-    if(error){
-      throw error;
-    }
 
-    if(data?.error){
-      throw new Error(data.error);
-    }
+    if(result.error)
+      throw result.error;
 
-    if(!data?.session){
-      throw new Error("The account was created but could not be signed in.");
-    }
 
-    const {error:sessionError} = await db.auth.setSession({
-      access_token:data.session.access_token,
-      refresh_token:data.session.refresh_token
-    });
+    const text =
+      result.data?.rule ||
+      result.data?.result ||
+      result.data?.message;
 
-    if(sessionError){
-      throw sessionError;
-    }
 
-    currentUser = data.user;
+    if(!text)
+      throw new Error(
+        'No AI result'
+      );
 
-    await loadProfile();
 
-    closeModals();
-    updateHeader();
+    output.innerHTML =
+      '<div class="suggest">' +
+      '<b>MEX AI command</b><br>' +
+      esc(text) +
+      '</div>';
 
-    toast("Welcome to MetGames, @" + username + "!");
 
-    await transition(async()=>{
-      render("home");
-    });
+    /*
+      The AI has generated
+      a WHEN → DO rule.
+
+      In the full editor this is where
+      the structured block data should
+      be inserted into the selected
+      object's rule graph.
+    */
+
+    block('when');
+
+    block('do');
+
 
   }catch(error){
 
-    setError(
-      "joinError",
-      friendlyError(error,"MetGames could not create the account. Please try again.")
+    /*
+      Friendly fallback.
+      No raw Supabase/OpenAI error
+      is shown to the user.
+    */
+
+    output.innerHTML =
+      '<div class="suggest">' +
+      '<b>Visual rule example:</b><br>' +
+      'WHEN ball touches Blue Block' +
+      ' → ' +
+      'DO release +' +
+      '</div>';
+
+
+    toast(
+      'Connect the server-side mex-ai Edge Function to enable live AI.',
+      true
     );
 
-  }finally{
-
-    button.disabled = false;
-    button.textContent = "Create account";
   }
+
 }
 
-async function login(){
 
-  setError("loginError","");
+/* ============================================================
+   SAVE DRAFT
+============================================================ */
 
-  const username = document.getElementById("loginUsername").value
-    .trim()
-    .toLowerCase();
+async function saveDraft(){
 
-  const password = document.getElementById("loginPassword").value;
+  const {
+    data:{
+      user
+    }
+  } =
+    await db.auth.getUser();
 
-  if(!username || !password){
-    setError("loginError","Enter your username and password.");
+
+  if(!user){
+
+    toast(
+      'Log in to save a draft.',
+      true
+    );
+
     return;
+
   }
 
-  const button = document.getElementById("loginSubmit");
-  button.disabled = true;
-  button.textContent = "Logging in...";
 
-  try{
+  const result =
+    await db
+      .from('games')
+      .insert({
 
-    const {data,error} = await db.functions.invoke(
-      "metgames-auth",
-      {
-        body:{
-          action:"login",
-          username,
-          password
-        }
-      }
+        owner_id:user.id,
+
+        title:
+          'My Adventure Game',
+
+        game_type:
+          '3D',
+
+        description:
+          'Created in MetGames Advanced Studio',
+
+        status:
+          'draft'
+
+      });
+
+
+  if(result.error){
+
+    /*
+      Friendly UI instead of raw
+      database errors.
+    */
+
+    toast(
+      'The draft could not be saved. Check the MetGames games table and RLS configuration.',
+      true
     );
 
-    if(error){
-      throw error;
-    }
-
-    if(data?.error){
-      throw new Error(data.error);
-    }
-
-    if(!data?.session){
-      throw new Error("Login could not be completed.");
-    }
-
-    const {error:sessionError} = await db.auth.setSession({
-      access_token:data.session.access_token,
-      refresh_token:data.session.refresh_token
-    });
-
-    if(sessionError){
-      throw sessionError;
-    }
-
-    currentUser = data.user;
-    currentProfile = data.profile || null;
-
-    if(!currentProfile){
-      await loadProfile();
-    }
-
-    closeModals();
-    updateHeader();
-
-    toast("Logged in successfully.");
-
-    await transition(async()=>{
-      render(currentPage || "home");
-    });
-
-  }catch(error){
-
-    setError(
-      "loginError",
-      friendlyError(error,"Username or password is incorrect.")
-    );
-
-  }finally{
-
-    button.disabled = false;
-    button.textContent = "Log in";
-  }
-}
-
-async function logout(){
-
-  try{
-    await db.auth.signOut();
-  }catch(_e){
-    /* no raw Supabase error shown */
-  }
-
-  currentUser = null;
-  currentProfile = null;
-
-  updateHeader();
-
-  toast("You have been logged out.");
-
-  await transition(async()=>{
-    render("home");
-  });
-}
-
-async function loadProfile(){
-
-  if(!currentUser){
-    currentProfile = null;
-    return;
-  }
-
-  try{
-
-    const {data,error} = await db
-      .from("profiles")
-      .select("*")
-      .eq("id",currentUser.id)
-      .maybeSingle();
-
-    if(error) throw error;
-
-    currentProfile = data;
-
-  }catch(_error){
-
-    currentProfile = {
-      id:currentUser.id,
-      username:"player",
-      display_name:"MetGames Player",
-      age_category:"8_12"
-    };
-  }
-}
-
-function updateHeader(){
-
-  const loginBtn = document.getElementById("loginBtn");
-  const joinBtn = document.getElementById("joinBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-
-  if(currentUser){
-    loginBtn.style.display = "none";
-    joinBtn.style.display = "none";
-    logoutBtn.style.display = "block";
   }else{
-    loginBtn.style.display = "block";
-    joinBtn.style.display = "block";
-    logoutBtn.style.display = "none";
+
+    toast(
+      'Draft saved to Supabase.'
+    );
+
   }
+
 }
 
-/* =========================================================
-   DATA
-   ========================================================= */
+
+/* ============================================================
+   TEST MODE
+============================================================ */
+
+function testGame(){
+
+  toast(
+    'Test mode started.'
+  );
+
+}
+
+
+/* ============================================================
+   PUBLISH
+============================================================ */
+
+async function publish(){
+
+  const {
+    data:{
+      user
+    }
+  } =
+    await db.auth.getUser();
+
+
+  if(!user){
+
+    toast(
+      'Log in before publishing.',
+      true
+    );
+
+    return;
+
+  }
+
+
+  /*
+    The production version should call
+    the MetGames server-side publish_game
+    RPC after validating the complete
+    game package.
+  */
+
+  toast(
+    'Publishing is ready for the MetGames publish_game RPC.'
+  );
+
+}
+
+
+/* ============================================================
+   LOAD PUBLISHED GAMES
+============================================================ */
 
 async function loadGames(){
 
-  try{
+  const box =
+    document.getElementById(
+      'games'
+    );
 
-    const {data,error} = await db
-      .from("games")
-      .select("*")
-      .eq("status","published")
-      .order("published_at",{ascending:false});
 
-    if(error) throw error;
+  box.innerHTML =
+    '<div class="game">' +
+    'Loading...' +
+    '</div>';
 
-    gamesCache = data || [];
 
-  }catch(_error){
+  const result =
+    await db
+      .from('games')
+      .select(
+        'title,game_type,description'
+      )
+      .eq(
+        'status',
+        'published'
+      )
+      .limit(30);
+
+
+  if(result.error){
 
     /*
-      Deliberately do not expose database errors to users.
-      The three METXON starter games remain available as a
-      local presentation fallback if the public query fails.
+      Friendly starter fallback.
     */
 
-    gamesCache = [
-      {
-        id:"demo-metxon-coin-dash",
-        title:"METXON Coin Dash",
-        description:"A fast starter game from METXON.",
-        game_type:"2d",
-        maturity_rating:"all",
-        owner_id:null,
-        status:"published"
-      },
-      {
-        id:"demo-metxon-sky-jump",
-        title:"METXON Sky Jump",
-        description:"Jump through a simple sky challenge.",
-        game_type:"2d",
-        maturity_rating:"all",
-        owner_id:null,
-        status:"published"
-      },
-      {
-        id:"demo-metxon-block-breaker",
-        title:"METXON Block Breaker",
-        description:"Break blocks in this classic-style starter.",
-        game_type:"2d",
-        maturity_rating:"all",
-        owner_id:null,
-        status:"published"
-      }
-    ];
-  }
+    box.innerHTML =
+      '<div class="game">' +
 
-  return gamesCache;
-}
+      '<div>' +
 
-async function getGame(id){
+      '<b>METXON Coin Dash</b>' +
 
-  const cached = gamesCache.find(g=>String(g.id)===String(id));
+      ' <span class="tag">' +
+      '2D • All ages' +
+      '</span>' +
 
-  if(cached && String(id).startsWith("demo-")){
-    return cached;
-  }
+      '</div>' +
 
-  try{
+      '</div>';
 
-    const {data,error} = await db
-      .from("games")
-      .select("*")
-      .eq("id",id)
-      .maybeSingle();
-
-    if(error) throw error;
-
-    return data || cached || null;
-
-  }catch(_error){
-
-    return cached || null;
-  }
-}
-
-async function getLatestVersion(gameId){
-
-  try{
-
-    const {data,error} = await db
-      .from("game_versions")
-      .select("*")
-      .eq("game_id",gameId)
-      .eq("status","published")
-      .order("version_number",{ascending:false})
-      .limit(1)
-      .maybeSingle();
-
-    if(error) throw error;
-
-    return data || null;
-
-  }catch(_error){
-
-    return null;
-  }
-}
-
-/* =========================================================
-   ROUTING
-   ========================================================= */
-
-async function navigate(page){
-
-  if(page==="play" && !currentUser){
-    openLogin();
-    toast("Log in to play games.");
     return;
+
   }
 
-  if(page==="create" && !currentUser){
-    openLogin();
-    toast("Log in to create games.");
+
+  if(!result.data.length){
+
+    box.innerHTML =
+      '<div class="game">' +
+      'No published games yet.' +
+      '</div>';
+
     return;
+
   }
 
-  await transition(async()=>{
-    render(page);
-  });
-}
 
-async function render(page){
+  box.innerHTML =
+    result.data
+      .map(game =>
 
-  currentPage = page;
+        '<div class="game">' +
 
-  document.querySelectorAll(".nav-btn").forEach(btn=>{
-    btn.classList.toggle(
-      "active",
-      btn.dataset.page===page
-    );
-  });
+        '<div>' +
 
-  if(page==="home") await renderHome();
-  else if(page==="play") await renderPlay();
-  else if(page==="trailers") await renderTrailers();
-  else if(page==="create") await renderCreate();
-  else if(page==="profile") await renderProfile();
-  else if(page.startsWith("game:")){
-    await renderGame(page.split(":")[1]);
-  }
-}
+        '<b>' +
+        esc(game.title) +
+        '</b> ' +
 
-/* =========================================================
-   HOME
-   ========================================================= */
+        '<span class="tag">' +
+        esc(
+          game.game_type ||
+          '2D'
+        ) +
+        '</span>' +
 
-async function renderHome(){
+        '<p class="muted">' +
+        esc(
+          game.description ||
+          ''
+        ) +
+        '</p>' +
 
-  const app = document.getElementById("app");
+        '</div>' +
 
-  const games = await loadGames();
+        '<button ' +
+        'class="action primary" ' +
+        'onclick="toast(\'Log in to play.\',true)">' +
 
-  app.innerHTML = `
-    <section class="hero">
+        'Play' +
 
-      <div>
-        <div class="kicker">A METXON PRODUCT · GAME PLATFORM</div>
+        '</button>' +
 
-        <h1>
-          Play.<br>
-          Build.<br>
-          Share.
-        </h1>
+        '</div>'
 
-        <p>
-          Welcome to MetGames — discover games, watch trailers
-          and create your own worlds.
-        </p>
-
-        <div class="hero-actions">
-          <button class="primary-btn" onclick="navigate('play')">
-            Explore Games
-          </button>
-
-          <button class="outline-btn" onclick="navigate('create')">
-            Create a Game
-          </button>
-        </div>
-      </div>
-
-      <div class="hero-card">
-        <img src="image.png" alt="MetGames logo">
-      </div>
-
-    </section>
-
-    <section class="section">
-
-      <div class="section-head">
-        <div>
-          <div class="section-kicker">FIRST GAMES</div>
-          <h2>Games from METXON</h2>
-          <div class="muted">Starter games for the first MetGames users.</div>
-        </div>
-
-        <button class="outline-btn" onclick="navigate('play')">
-          See all
-        </button>
-      </div>
-
-      <div class="grid">
-        ${games.slice(0,3).map(gameCard).join("")}
-      </div>
-
-    </section>
-  `;
-
-}
-
-function gameCard(game){
-
-  return `
-    <div class="card">
-
-      <div class="game-thumb">
-        ${game.game_type==="3d" ? "3D" : "2D"}
-      </div>
-
-      <h3>${esc(game.title)}</h3>
-
-      <p>${esc(game.description || "A MetGames experience.")}</p>
-
-      <div class="tags">
-        <span class="tag">${esc(game.game_type || "2d").toUpperCase()}</span>
-        <span class="tag">${esc(game.maturity_rating || "all")}</span>
-      </div>
-
-      <button
-        class="primary-btn"
-        onclick="openGame('${esc(game.id)}')"
-      >
-        View Game
-      </button>
-
-    </div>
-  `;
-}
-
-/* =========================================================
-   PLAY
-   ========================================================= */
-
-async function renderPlay(){
-
-  const app = document.getElementById("app");
-  const games = await loadGames();
-
-  app.innerHTML = `
-    <section class="section" style="margin-top:10px">
-
-      <div class="section-head">
-        <div>
-          <div class="section-kicker">PLAY</div>
-          <h2>Discover Games</h2>
-          <div class="muted">
-            Free accounts can launch up to 20 2D games or 5 3D games per day.
-          </div>
-        </div>
-      </div>
-
-      <div class="grid">
-        ${
-          games.length
-          ? games.map(gameCard).join("")
-          : `<div class="empty">No published games yet.</div>`
-        }
-      </div>
-
-    </section>
-  `;
-}
-
-/* =========================================================
-   GAME PAGE
-   ========================================================= */
-
-async function openGame(id){
-
-  if(!currentUser){
-    openLogin();
-    toast("Log in to play games.");
-    return;
-  }
-
-  await transition(async()=>{
-    await renderGame(id);
-  });
-}
-
-async function renderGame(id){
-
-  const app = document.getElementById("app");
-  const game = await getGame(id);
-
-  if(!game){
-    app.innerHTML = `
-      <div class="empty">
-        This game could not be found.
-      </div>
-    `;
-    return;
-  }
-
-  const version = String(id).startsWith("demo-")
-    ? null
-    : await getLatestVersion(id);
-
-  app.innerHTML = `
-    <section class="game-page">
-
-      <div class="game-header">
-
-        <div>
-          <div class="section-kicker">GAME</div>
-          <h1>${esc(game.title)}</h1>
-
-          <div class="game-meta">
-            ${esc(game.game_type || "2d").toUpperCase()}
-            ·
-            ${esc(game.maturity_rating || "all")}
-            ·
-            Published
-          </div>
-        </div>
-
-        <button class="outline-btn" onclick="navigate('play')">
-          ← Back
-        </button>
-
-      </div>
-
-      <p class="muted" style="font-size:17px;line-height:1.6">
-        ${esc(game.description || "Welcome to this MetGames world.")}
-      </p>
-
-      <div class="game-stage">
-
-        <div class="game-toolbar">
-          <div class="hud">
-            <span>FPS <b id="gameFps">--</b></span>
-            <span>MODE <b>${esc(game.game_type || "2d").toUpperCase()}</b></span>
-          </div>
-
-          <button class="primary-btn" onclick="startGame('${esc(game.id)}')">
-            Play
-          </button>
-        </div>
-
-        <canvas id="gameCanvas" width="900" height="500"></canvas>
-
-      </div>
-
-      ${
-        version
-        ? `<div class="muted" style="margin-top:12px">
-             Version ${esc(version.version_number)}
-           </div>`
-        : ""
-      }
-
-    </section>
-  `;
-
-  drawIdleCanvas();
-}
-
-function drawIdleCanvas(){
-
-  const canvas = document.getElementById("gameCanvas");
-
-  if(!canvas) return;
-
-  const ctx = canvas.getContext("2d");
-
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  ctx.fillStyle="#07101d";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-
-  ctx.fillStyle="#12253f";
-  ctx.fillRect(0,420,900,80);
-
-  ctx.fillStyle="#7de7ff";
-  ctx.font="bold 24px Arial";
-  ctx.textAlign="center";
-  ctx.fillText(
-    "Press PLAY to enter the MetGames runtime",
-    450,
-    245
-  );
-
-  ctx.font="14px Arial";
-  ctx.fillStyle="#7d91ae";
-  ctx.fillText(
-    "WASD / Arrow Keys · Space to jump",
-    450,
-    275
-  );
-}
-
-/* =========================================================
-   GAME RUNTIME
-   ========================================================= */
-
-async function startGame(id){
-
-  if(!currentUser){
-    openLogin();
-    return;
-  }
-
-  const game = await getGame(id);
-
-  if(!game) return;
-
-  if(!String(id).startsWith("demo-")){
-
-    try{
-
-      const {data,error} = await db.rpc(
-        "increment_game_launch",
-        {p_game_id:id}
-      );
-
-      if(error) throw error;
-
-      if(data?.allowed===false){
-        toast("Today's play limit has been reached.");
-        return;
-      }
-
-    }catch(error){
-
-      const message = friendlyError(
-        error,
-        "This game could not be launched right now."
-      );
-
-      if(String(error?.message || "").includes("DAILY_PLAY_LIMIT")){
-        toast(message);
-        return;
-      }
-
-      /*
-        Do not expose database errors.
-        For non-critical launch telemetry failures,
-        continue into the runtime.
-      */
-    }
-  }
-
-  run2DGame(game);
-}
-
-function run2DGame(game){
-
-  const canvas = document.getElementById("gameCanvas");
-
-  if(!canvas) return;
-
-  cancelAnimationFrame(animationId);
-
-  const ctx = canvas.getContext("2d");
-
-  const keys = {};
-
-  const player = {
-    x:100,
-    y:350,
-    vx:0,
-    vy:0,
-    size:30,
-    grounded:false
-  };
-
-  window.onkeydown = e=>{
-    keys[e.key.toLowerCase()] = true;
-
-    if(
-      ["arrowup","arrowdown","arrowleft","arrowright"," "].includes(
-        e.key.toLowerCase()
       )
-    ){
-      e.preventDefault();
-    }
-  };
+      .join('');
 
-  window.onkeyup = e=>{
-    keys[e.key.toLowerCase()] = false;
-  };
-
-  const platforms = [
-    {x:0,y:450,w:900,h:50},
-    {x:230,y:350,w:180,h:22},
-    {x:500,y:275,w:170,h:22},
-    {x:730,y:210,w:120,h:22}
-  ];
-
-  let last = performance.now();
-
-  function frame(now){
-
-    const dt = Math.min((now-last)/1000,.033);
-    last = now;
-
-    update(dt);
-    draw();
-
-    updateFPS();
-
-    animationId = requestAnimationFrame(frame);
-  }
-
-  function update(dt){
-
-    player.vx = 0;
-
-    if(keys["arrowleft"] || keys["a"]){
-      player.vx = -220;
-    }
-
-    if(keys["arrowright"] || keys["d"]){
-      player.vx = 220;
-    }
-
-    if(
-      (keys["arrowup"] || keys["w"] || keys[" "]) &&
-      player.grounded
-    ){
-      player.vy = -430;
-      player.grounded = false;
-    }
-
-    player.vy += 950*dt;
-
-    player.x += player.vx*dt;
-    player.y += player.vy*dt;
-
-    if(player.x<0) player.x=0;
-
-    if(player.x+player.size>900){
-      player.x=900-player.size;
-    }
-
-    player.grounded=false;
-
-    for(const p of platforms){
-
-      const horizontal =
-        player.x < p.x+p.w &&
-        player.x+player.size > p.x;
-
-      const falling =
-        player.vy >= 0;
-
-      const bottom =
-        player.y+player.size;
-
-      if(horizontal && falling && bottom>=p.y && bottom<=p.y+28){
-
-        player.y=p.y-player.size;
-        player.vy=0;
-        player.grounded=true;
-      }
-    }
-
-    if(player.y>520){
-
-      player.x=100;
-      player.y=350;
-      player.vy=0;
-    }
-  }
-
-  function draw(){
-
-    ctx.clearRect(0,0,900,500);
-
-    const gradient=ctx.createLinearGradient(0,0,0,500);
-    gradient.addColorStop(0,"#081a31");
-    gradient.addColorStop(1,"#040a13");
-
-    ctx.fillStyle=gradient;
-    ctx.fillRect(0,0,900,500);
-
-    /* stars */
-    ctx.fillStyle="#21486c";
-
-    for(let i=0;i<35;i++){
-
-      const x=(i*97)%900;
-      const y=(i*53)%330;
-
-      ctx.fillRect(x,y,2,2);
-    }
-
-    /* platforms */
-
-    for(const p of platforms){
-
-      ctx.fillStyle="#17365a";
-      ctx.fillRect(p.x,p.y,p.w,p.h);
-
-      ctx.fillStyle="#42d9ff";
-      ctx.fillRect(p.x,p.y,p.w,3);
-    }
-
-    /* player */
-
-    ctx.fillStyle="#55b8ff";
-    ctx.fillRect(
-      player.x,
-      player.y,
-      player.size,
-      player.size
-    );
-
-    ctx.fillStyle="#dffaff";
-    ctx.fillRect(
-      player.x+7,
-      player.y+7,
-      6,
-      6
-    );
-
-    ctx.fillRect(
-      player.x+18,
-      player.y+7,
-      6,
-      6
-    );
-
-    ctx.fillStyle="#9eb4d1";
-    ctx.font="13px Arial";
-    ctx.textAlign="left";
-    ctx.fillText(
-      game.title || "MetGames",
-      18,
-      25
-    );
-  }
-
-  animationId=requestAnimationFrame(frame);
 }
 
-/* =========================================================
-   FPS
-   ========================================================= */
 
-function updateFPS(){
+/* ============================================================
+   CREATOR PROFILE
+============================================================ */
 
-  fpsFrames++;
+async function profile(name){
 
-  const now=performance.now();
+  hide();
 
-  if(now-fpsLast>=1000){
+  creator = name;
 
-    const fps=Math.round(
-      fpsFrames*1000/(now-fpsLast)
-    );
 
-    fpsFrames=0;
-    fpsLast=now;
+  document
+    .getElementById('profile')
+    .classList.remove('hidden');
 
-    document.getElementById("headerFps").textContent=fps;
 
-    const gameFps=document.getElementById("gameFps");
+  document
+    .getElementById('pname')
+    .textContent = name;
 
-    if(gameFps){
-      gameFps.textContent=fps;
-    }
-  }
-}
 
-/* =========================================================
-   TRAILERS
-   ========================================================= */
+  document
+    .getElementById('pavatar')
+    .textContent =
+      name[0].toUpperCase();
 
-async function renderTrailers(){
 
-  const app=document.getElementById("app");
+  stars = 0;
 
-  let trailers=[];
+  renderStars();
 
-  try{
 
-    const {data,error}=await db
-      .from("trailers")
-      .select(`
-        id,
-        game_id,
-        storage_path,
-        duration_seconds,
-        status,
-        games (
-          title,
-          description,
-          maturity_rating,
-          game_type
-        )
-      `)
-      .eq("status","published")
-      .order("created_at",{ascending:false});
+  isFollowing = false;
 
-    if(error) throw error;
+  document
+    .getElementById('follow')
+    .textContent =
+      'Follow';
 
-    trailers=data || [];
-
-  }catch(_error){
-
-    trailers=[];
-  }
-
-  app.innerHTML=`
-    <section class="section" style="margin-top:10px">
-
-      <div class="section-head">
-        <div>
-          <div class="section-kicker">WATCH TRAILERS</div>
-          <h2>Game Trailers</h2>
-          <div class="muted">
-            Trailers are available publicly without an account.
-          </div>
-        </div>
-      </div>
-
-      ${
-        trailers.length
-        ? `
-          <div class="grid">
-            ${trailers.map(t=>`
-              <div class="card">
-
-                <div class="game-thumb">▶</div>
-
-                <h3>${esc(t.games?.title || "Game Trailer")}</h3>
-
-                <p>
-                  ${esc(
-                    t.games?.description ||
-                    "Watch the latest MetGames trailer."
-                  )}
-                </p>
-
-                <div class="tags">
-                  <span class="tag">
-                    ${esc(t.games?.game_type || "2d").toUpperCase()}
-                  </span>
-                  <span class="tag">
-                    ${esc(t.games?.maturity_rating || "all")}
-                  </span>
-                </div>
-
-                <button
-                  class="primary-btn"
-                  onclick="toast('Trailer playback will be connected to MetGames Storage in the next media phase.')"
-                >
-                  Watch
-                </button>
-
-              </div>
-            `).join("")}
-          </div>
-        `
-        : `
-          <div class="empty">
-            No published trailers yet.
-            <br><br>
-            Creators will be able to publish trailers from Creator Studio.
-          </div>
-        `
-      }
-
-    </section>
-  `;
-}
-
-/* =========================================================
-   CREATE
-   ========================================================= */
-
-async function renderCreate(){
-
-  const app=document.getElementById("app");
-
-  if(!currentUser){
-    openLogin();
-    return;
-  }
-
-  app.innerHTML=`
-    <section class="create-box">
-
-      <div class="section-kicker">CREATOR</div>
-      <h2>Create a Game</h2>
-
-      <div class="creator-note">
-        <strong>Free Creator</strong><br>
-        Up to 5 games per week · 10 GB storage allowance.
-        Your projects are stored in MetGames cloud storage.
-      </div>
-
-      <div class="form-row">
-        <label>Game title</label>
-        <input id="gameTitle" maxlength="120" placeholder="My MetGames World">
-      </div>
-
-      <div class="form-row">
-        <label>Description</label>
-        <textarea
-          id="gameDescription"
-          maxlength="3000"
-          placeholder="Tell players about your game."
-        ></textarea>
-      </div>
-
-      <div class="form-row">
-        <label>Game type</label>
-        <select id="gameType">
-          <option value="2d">2D</option>
-          <option value="3d">3D</option>
-        </select>
-      </div>
-
-      <div class="form-row">
-        <label>Maturity rating</label>
-        <select id="gameRating">
-          <option value="all">All ages</option>
-          <option value="7+">7+</option>
-          <option value="12+">12+</option>
-          <option value="13+">13+</option>
-          <option value="16+">16+</option>
-          <option value="18+">18+</option>
-        </select>
-      </div>
-
-      <div class="form-error" id="createError"></div>
-
-      <button
-        class="primary-btn"
-        id="createGameBtn"
-        onclick="createGame()"
-      >
-        Create project
-      </button>
-
-    </section>
-  `;
-}
-
-async function createGame(){
-
-  setError("createError","");
-
-  const title=document.getElementById("gameTitle").value.trim();
-  const description=document.getElementById("gameDescription").value.trim();
-  const gameType=document.getElementById("gameType").value;
-  const maturity=document.getElementById("gameRating").value;
-
-  if(!title){
-    setError("createError","Enter a game title.");
-    return;
-  }
-
-  const button=document.getElementById("createGameBtn");
-
-  button.disabled=true;
-  button.textContent="Creating...";
-
-  try{
-
-    const {data,error}=await db.rpc(
-      "create_game",
-      {
-        p_title:title,
-        p_description:description,
-        p_game_type:gameType,
-        p_maturity_rating:maturity
-      }
-    );
-
-    if(error) throw error;
-
-    if(!data){
-      throw new Error("Game project could not be created.");
-    }
-
-    toast("Game project created.");
-
-    await transition(async()=>{
-      renderMyGame(data);
-    });
-
-  }catch(error){
-
-    setError(
-      "createError",
-      friendlyError(
-        error,
-        "MetGames could not create your game project."
-      )
-    );
-
-  }finally{
-
-    button.disabled=false;
-    button.textContent="Create project";
-  }
-}
-
-function renderMyGame(game){
-
-  const app=document.getElementById("app");
-
-  app.innerHTML=`
-    <section class="create-box">
-
-      <div class="section-kicker">PROJECT CREATED</div>
-
-      <h2>${esc(game.title)}</h2>
-
-      <p class="muted">
-        Your project is safely stored in MetGames.
-      </p>
-
-      <div class="tags">
-        <span class="tag">${esc(game.game_type).toUpperCase()}</span>
-        <span class="tag">${esc(game.maturity_rating)}</span>
-        <span class="tag">DRAFT</span>
-      </div>
-
-      <div class="editor-tools">
-        <button class="object-btn" onclick="addEditorObject('Player')">
-          + Player
-        </button>
-
-        <button class="object-btn" onclick="addEditorObject('Platform')">
-          + Platform
-        </button>
-
-        <button class="object-btn" onclick="addEditorObject('Enemy')">
-          + Enemy
-        </button>
-
-        <button class="object-btn" onclick="addEditorObject('Coin')">
-          + Coin
-        </button>
-
-        <button class="object-btn" onclick="addEditorObject('Text')">
-          + Text
-        </button>
-      </div>
-
-      <div id="editorObjects" class="object-list">
-        <div class="empty">
-          Add objects to begin building your 2D scene.
-        </div>
-      </div>
-
-      <div style="margin-top:20px">
-        <button
-          class="primary-btn"
-          onclick="saveEditor('${esc(game.id)}')"
-        >
-          Save project
-        </button>
-      </div>
-
-    </section>
-  `;
-
-  window.__editorGame=game;
-  window.__editorObjects=[];
-}
-
-function addEditorObject(type){
-
-  if(!window.__editorObjects){
-    window.__editorObjects=[];
-  }
-
-  window.__editorObjects.push({
-    type,
-    x:100 + window.__editorObjects.length*35,
-    y:100,
-    width:type==="Text"?180:40,
-    height:type==="Text"?35:40
-  });
-
-  drawEditorObjects();
-}
-
-function drawEditorObjects(){
-
-  const box=document.getElementById("editorObjects");
-
-  if(!box) return;
-
-  if(!window.__editorObjects.length){
-    box.innerHTML=`
-      <div class="empty">
-        Add objects to begin.
-      </div>
-    `;
-    return;
-  }
-
-  box.innerHTML=window.__editorObjects.map((obj,index)=>`
-    <div class="object-row">
-      <div>
-        <strong>${esc(obj.type)}</strong>
-        <div class="muted">
-          x:${obj.x} · y:${obj.y}
-        </div>
-      </div>
-
-      <button
-        class="small-btn"
-        onclick="removeEditorObject(${index})"
-      >
-        Remove
-      </button>
-    </div>
-  `).join("");
-}
-
-function removeEditorObject(index){
-
-  window.__editorObjects.splice(index,1);
-  drawEditorObjects();
-}
-
-async function saveEditor(gameId){
-
-  if(!currentUser || !window.__editorObjects){
-    toast("Please log in again.");
-    return;
-  }
-
-  try{
-
-    const {data:version,error:versionError}=await db
-      .from("game_versions")
-      .select("*")
-      .eq("game_id",gameId)
-      .eq("status","draft")
-      .order("version_number",{ascending:false})
-      .limit(1)
-      .maybeSingle();
-
-    if(versionError) throw versionError;
-
-    if(!version){
-      throw new Error("Draft version not found.");
-    }
-
-    const manifest={
-      engine:"metgames-2d-mvp",
-      schema:1,
-      objects:window.__editorObjects
-    };
-
-    const {error}=await db
-      .from("game_versions")
-      .update({
-        asset_manifest:manifest
-      })
-      .eq("id",version.id)
-      .eq("created_by",currentUser.id);
-
-    if(error) throw error;
-
-    toast("Project saved to Supabase.");
-
-  }catch(error){
-
-    toast(
-      friendlyError(
-        error,
-        "The project could not be saved."
-      )
-    );
-  }
-}
-
-/* =========================================================
-   PROFILE
-   ========================================================= */
-
-async function renderProfile(){
-
-  const app=document.getElementById("app");
-
-  if(!currentUser){
-    app.innerHTML=`
-      <section class="section">
-        <div class="empty">
-          Log in to view your MetGames profile.
-          <br><br>
-          <button class="primary-btn" onclick="openLogin()">
-            Log in
-          </button>
-        </div>
-      </section>
-    `;
-    return;
-  }
-
-  await loadProfile();
-
-  const username=currentProfile?.username || "player";
-  const display=currentProfile?.display_name || username;
-
-  app.innerHTML=`
-    <section class="profile-box">
-
-      <div class="profile-top">
-
-        <div class="avatar">
-          ${esc(username.charAt(0).toUpperCase())}
-        </div>
-
-        <div>
-          <div class="profile-name">
-            ${esc(display)}
-          </div>
-
-          <div class="muted">
-            @${esc(username)}
-          </div>
-        </div>
-
-      </div>
-
-      <div class="profile-grid">
-
-        <div class="stat">
-          <strong>Creator</strong>
-          <span class="muted">MetGames</span>
-        </div>
-
-        <div class="stat">
-          <strong>
-            ${ageLabel(currentProfile?.age_category)}
-          </strong>
-          <span class="muted">Age category</span>
-        </div>
-
-        <div class="stat">
-          <strong>
-            ${Number(currentProfile?.followers_count || 0)}
-          </strong>
-          <span class="muted">Followers</span>
-        </div>
-
-      </div>
-
-      <div style="margin-top:25px">
-        <button class="outline-btn" onclick="navigate('create')">
-          Creator Studio
-        </button>
-      </div>
-
-    </section>
-  `;
-}
-
-/* =========================================================
-   HASH ROUTING
-   ========================================================= */
-
-function handleHash(){
-
-  const hash=location.hash.replace(/^#/,"");
-
-  if(!hash || hash==="home"){
-    render("home");
-    return;
-  }
-
-  if(hash.startsWith("game/")){
-    render("game:"+hash.split("/")[1]);
-    return;
-  }
-
-  if(["play","trailers","create","profile"].includes(hash)){
-    render(hash);
-    return;
-  }
-
-  render("home");
-}
-
-window.addEventListener("hashchange",handleHash);
-
-/* =========================================================
-   STARTUP
-   ========================================================= */
-
-(async function(){
 
   /*
-    persistSession:false means we intentionally do not use
-    localStorage/sessionStorage for authentication persistence.
+    Load creator statistics
+    from Supabase.
   */
 
-  updateHeader();
+  const result =
+    await db
+      .from('creator_profiles')
+      .select(
+        'display_name,' +
+        'age_category,' +
+        'games_created,' +
+        'games_played,' +
+        'followers'
+      )
+      .eq(
+        'username',
+        name
+      )
+      .maybeSingle();
 
-  await render("home");
 
-})();
+  if(
+    !result.error &&
+    result.data
+  ){
+
+    const d =
+      result.data;
+
+
+    document
+      .getElementById('pname')
+      .textContent =
+        d.display_name ||
+        name;
+
+
+    document
+      .getElementById('page')
+      .textContent =
+        d.age_category ||
+        '13–15';
+
+
+    document
+      .getElementById('created')
+      .textContent =
+        d.games_created ??
+        0;
+
+
+    document
+      .getElementById('played')
+      .textContent =
+        d.games_played ??
+        0;
+
+
+    document
+      .getElementById('followers')
+      .textContent =
+        d.followers ??
+        0;
+
+  }
+
+}
+
+
+/* ============================================================
+   CREATOR RATING UI
+============================================================ */
+
+function renderStars(){
+
+  document
+    .getElementById('stars')
+    .innerHTML =
+
+      [1,2,3,4,5]
+
+        .map(
+          number =>
+
+            '<button ' +
+            'class="' +
+            (
+              number <= stars
+                ? 'on'
+                : ''
+            ) +
+            '" ' +
+            'onclick="stars=' +
+            number +
+            ';renderStars()">' +
+
+            '★' +
+
+            '</button>'
+
+        )
+        .join('');
+
+}
+
+
+/* ============================================================
+   SUBMIT CREATOR RATING
+============================================================ */
+
+async function rate(){
+
+  if(!stars){
+
+    toast(
+      'Choose a rating.',
+      true
+    );
+
+    return;
+
+  }
+
+
+  const {
+    data:{
+      user
+    }
+  } =
+    await db.auth.getUser();
+
+
+  if(!user){
+
+    toast(
+      'Log in to rate creators.',
+      true
+    );
+
+    return;
+
+  }
+
+
+  const result =
+    await db
+      .from('creator_ratings')
+      .upsert(
+
+        {
+          creator_username:
+            creator,
+
+          rater_id:
+            user.id,
+
+          rating:
+            stars
+
+        },
+
+        {
+          onConflict:
+            'creator_username,rater_id'
+        }
+
+      );
+
+
+  if(result.error){
+
+    toast(
+      'Creator ratings are not configured yet.',
+      true
+    );
+
+    return;
+
+  }
+
+
+  document
+    .getElementById('ratingMsg')
+    .textContent =
+      'Your rating was saved.';
+
+
+  toast(
+    'Rating saved to Supabase.'
+  );
+
+}
+
+
+/* ============================================================
+   FOLLOW CREATOR
+============================================================ */
+
+async function follow(){
+
+  const {
+    data:{
+      user
+    }
+  } =
+    await db.auth.getUser();
+
+
+  if(!user){
+
+    toast(
+      'Log in to follow creators.',
+      true
+    );
+
+    return;
+
+  }
+
+
+  let result;
+
+
+  if(!isFollowing){
+
+    result =
+      await db
+        .from('creator_follows')
+        .insert({
+
+          creator_username:
+            creator,
+
+          follower_id:
+            user.id
+
+        });
+
+  }else{
+
+    result =
+      await db
+        .from('creator_follows')
+        .delete()
+        .eq(
+          'creator_username',
+          creator
+        )
+        .eq(
+          'follower_id',
+          user.id
+        );
+
+  }
+
+
+  if(result.error){
+
+    toast(
+      'Creator following is not configured yet.',
+      true
+    );
+
+    return;
+
+  }
+
+
+  isFollowing =
+    !isFollowing;
+
+
+  document
+    .getElementById('follow')
+    .textContent =
+      isFollowing
+        ? 'Following'
+        : 'Follow';
+
+
+  toast(
+    isFollowing
+      ? 'Following ' + creator
+      : 'Unfollowed ' + creator
+  );
+
+}
+
+
+/* ============================================================
+   START
+============================================================ */
+
+studio();
+
+renderStars();
+
 </script>
 
 </body>
