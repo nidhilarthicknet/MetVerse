@@ -736,6 +736,25 @@ footer a{
   <div id="plansGrid" class="plan-grid"></div>
 </div></div>
 
+<!-- CREATE GAME WIZARD -->
+<div class="modal" id="gameCreateModal"><div class="modal-box" style="width:min(650px,100%)">
+  <div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><div><h2 style="margin:0">Create a game</h2><div class="small">Set the basics before opening the creator.</div></div><button class="btn" onclick="closeGameCreate()">Close</button></div>
+  <form class="form" id="gameCreateForm" style="margin-top:18px">
+    <input type="hidden" id="newGameType" value="2d">
+    <div><label>Game name</label><input id="newGameTitle" maxlength="120" required placeholder="Block Breaker"></div>
+    <div><label>Description</label><textarea id="newGameDescription" maxlength="2000" placeholder="What is your game about?"></textarea></div>
+    <div class="form-row"><div><label>Maturity rating</label><select id="newGameMaturity"><option value="all">All</option><option value="7+">7+</option><option value="12+">12+</option><option value="13+">13+</option><option value="16+">16+</option><option value="18+">18+</option></select></div><div><label>Game type</label><input id="newGameTypeLabel" disabled value="2D"></div></div>
+    <div class="notice"><b>Pay to play</b><br>Default: No. If enabled, players pay once through METPAY before they can play the published game. METPAY settlement uses the fictional METXON JP ledger; this prototype does not connect to cards or bank payments.</div>
+    <div class="form-row"><div><label>Pay to play needed?</label><select id="newGamePay" onchange="toggleNewGamePayFields()"><option value="no">No</option><option value="yes">Yes</option></select></div><div id="newGamePriceWrap" style="display:none"><label>Price</label><input id="newGamePrice" inputmode="decimal" placeholder="1000"></div></div>
+    <div id="newGameCurrencyWrap" style="display:none"><label>Currency</label><select id="newGameCurrency"><option>INR</option><option>USD</option><option>GBP</option><option>EUR</option><option>AED</option><option>JP</option></select></div>
+    <div id="newGameFormError" class="form-error"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end"><button class="btn" type="button" onclick="closeGameCreate()">Cancel</button><button class="btn primary" type="submit">Create & Open Creator</button></div>
+  </form>
+</div></div>
+
+<!-- GENERIC MESSAGE MODAL -->
+<div class="modal" id="genericModal"><div class="modal-box" id="genericModalBox"></div></div>
+
 <div id="toast" style="position:fixed;right:18px;bottom:18px;z-index:999999;max-width:420px"></div>
 
 <script>
@@ -838,11 +857,11 @@ async function renderHome(){
 }
 async function loadGameCards(id,limit=20){
   const el=document.getElementById(id);if(!el)return;
-  const {data,error}=await db.from("games").select("id,title,description,game_type,maturity_rating,published_at,owner_id,thumbnail_path").eq("status","published").order("published_at",{ascending:false}).limit(limit);
+  const {data,error}=await db.from("games").select("id,title,description,game_type,maturity_rating,published_at,owner_id,thumbnail_path,pay_to_play,play_price,play_currency").eq("status","published").order("published_at",{ascending:false}).limit(limit);
   if(error){el.innerHTML=`<div class="empty">Games could not be loaded right now. ${esc(error.message)}</div>`;return;}
   if(!data?.length){el.innerHTML=`<div class="empty">No published games yet.<br>Create the first METGAME.</div>`;return;}
   const ids=[...new Set(data.map(x=>x.owner_id).filter(Boolean))],profiles=ids.length?(await db.from("profiles").select("id,username").in("id",ids)).data||[]:[],pm={};profiles.forEach(p=>pm[p.id]=p);
-  el.innerHTML=data.map(g=>`<article class="card"><div class="thumbnail">${g.thumbnail_path?`<img src="${esc(g.thumbnail_path)}" style="width:100%;height:100%;object-fit:cover">`:g.game_type==="3d"?"3D":"2D"}</div><div class="card-body"><h3>${esc(g.title)}</h3><p>${esc(g.description||"No description yet.")}</p><div class="meta"><span class="tag">${esc(g.game_type.toUpperCase())}</span><span class="tag">${esc(g.maturity_rating)}</span><span class="tag">@${esc(pm[g.owner_id]?.username||"creator")}</span></div><button class="btn primary full" style="margin-top:12px" onclick="navigate('game',{gameId:'${g.id}'})">View / Play</button></div></article>`).join("");
+  el.innerHTML=data.map(g=>`<article class="card"><div class="thumbnail">${g.thumbnail_path?`<img src="${esc(g.thumbnail_path)}" style="width:100%;height:100%;object-fit:cover">`:g.game_type==="3d"?"3D":"2D"}</div><div class="card-body"><h3>${esc(g.title)}</h3><p>${esc(g.description||"No description yet.")}</p><div class="meta"><span class="tag">${esc(g.game_type.toUpperCase())}</span><span class="tag">${esc(g.maturity_rating)}</span><span class="tag">@${esc(pm[g.owner_id]?.username||"creator")}</span>${g.pay_to_play?`<span class="tag">Pay ${Number(g.play_price).toLocaleString()} ${esc(g.play_currency)}</span>`:`<span class="tag">Free to play</span>`}</div><button class="btn primary full" style="margin-top:12px" onclick="navigate('game',{gameId:'${g.id}'})">View / Play</button></div></article>`).join("");
 }
 async function renderPlay(){setApp(`<div class="section-title"><h2>Play</h2><span>Discover published METGAMES</span></div><div id="playGames" class="grid"><div class="empty">Loading…</div></div>`);await loadGameCards("playGames",50);}
 
@@ -850,6 +869,7 @@ async function renderTrailers(){
   const {data,error}=await db.from("trailers").select("id,game_id,storage_path,audio_path,duration_seconds,media_mode,trailer_title,short_description,release_text,where_to_play,age_rating,game_type,creator_name,platform,status,games(title,description,status)").eq("status","published").order("created_at",{ascending:false}).limit(50);
   const cards=(data||[]).map(t=>{const video=t.storage_path?db.storage.from(PUBLIC_BUCKET).getPublicUrl(t.storage_path).data.publicUrl:null;const audio=t.audio_path?db.storage.from(PUBLIC_BUCKET).getPublicUrl(t.audio_path).data.publicUrl:null;return `<article class="card"><div class="thumbnail">${t.media_mode==="video"&&video?`<video class="video-preview" controls preload="metadata" src="${esc(video)}"></video>`:`TRAILER`}</div><div class="card-body"><h3>${esc(t.trailer_title||t.games?.title||"Trailer")}</h3><p>${esc(t.short_description||t.games?.description||"")}</p><div class="meta"><span class="tag">${esc(t.game_type||"")}</span><span class="tag">${esc(t.platform||"")}</span><span class="tag">${t.duration_seconds||0}s</span></div>${audio?`<audio controls style="width:100%;margin-top:10px" src="${esc(audio)}"></audio>`:""}<button class="btn primary full" style="margin-top:10px" onclick="navigate('game',{gameId:'${t.game_id}'})">Play Game</button></div></article>`}).join("");
   setApp(`<div class="section-title"><h2>Watch Trailers</h2><span>Public trailer gallery</span></div>${error?`<div class="notice bad">${esc(error.message)}</div>`:""}<div class="grid">${cards||`<div class="empty">No published trailers yet.</div>`}</div><div style="margin-top:40px"><div class="section-title"><h2>Create your own trailer</h2><span>${canTrailer()?"Silver / Gold":"Silver or Gold required"}</span></div>${renderTrailerCreator()}</div>`);
+  if(currentUser && canTrailer()) await populateTrailerGames();
 }
 function renderTrailerCreator(){
   if(!currentUser)return `<div class="notice">Log in to create a trailer.</div>`;
@@ -891,7 +911,7 @@ async function renderCreate(){
   if(!currentUser){openAuth();return;}
   setApp(`<div class="section-title"><h2>Create</h2><span>Choose your creator workspace</span></div>
   <div class="creator-choice">
-    <button class="choice" onclick="startNewGame('2d')"><h3>Free Creator</h3><p>Beginner-friendly 2D editor with assets, objects, timeline, visual rules, test mode and publishing.</p><span class="tag">Available</span></button>
+    <button class="choice" onclick="openGameCreate('2d')"><h3>Free Creator</h3><p>Beginner-friendly 2D editor with assets, objects, timeline, visual rules, test mode and publishing.</p><span class="tag">Available</span></button>
     <button class="choice ${isStudio()?"":"locked"}" onclick="${isStudio()?"openAdvancedStudio()":"openPlans()"}"><h3>Advanced Studio ${isStudio()?"":"🔒"}</h3><p>3D scene tools, advanced animation, physics, camera, lighting, Blox coding and MEX AI.</p><span class="tag">${isStudio()?currentEntitlement.plan_id.toUpperCase():"Base / Silver / Gold"}</span></button>
   </div>
   <div id="creatorContent"></div>
@@ -899,12 +919,72 @@ async function renderCreate(){
   ${renderAdCreator()}`);
   await loadMyGames();
 }
-async function startNewGame(type){if(!currentUser){openAuth();return;}const title=prompt("Game title:");if(!title)return;const desc=prompt("Game description:")||"";const maturity=prompt("Age rating:","All")||"All";const {data,error}=await db.rpc("create_game",{p_title:title,p_description:desc,p_game_type:type,p_maturity_rating:maturity});if(error){toast(error.message,"bad");return;}const g=Array.isArray(data)?data[0]:data;await openCreator(g.id);}
+function openGameCreate(type){
+  if(!currentUser){openAuth();return;}
+  document.getElementById("newGameType").value=type;
+  document.getElementById("newGameTypeLabel").value=type.toUpperCase();
+  document.getElementById("newGameTitle").value="";
+  document.getElementById("newGameDescription").value="";
+  document.getElementById("newGameMaturity").value="all";
+  document.getElementById("newGamePay").value="no";
+  document.getElementById("newGamePrice").value="";
+  document.getElementById("newGameCurrency").value="INR";
+  document.getElementById("newGameFormError").textContent="";
+  toggleNewGamePayFields();
+  document.getElementById("gameCreateModal").classList.add("open");
+  setTimeout(()=>document.getElementById("newGameTitle")?.focus(),50);
+}
+function closeGameCreate(){document.getElementById("gameCreateModal").classList.remove("open");}
+function toggleNewGamePayFields(){
+  const on=document.getElementById("newGamePay").value==="yes";
+  document.getElementById("newGamePriceWrap").style.display=on?"block":"none";
+  document.getElementById("newGameCurrencyWrap").style.display=on?"block":"none";
+  document.getElementById("newGamePrice").required=on;
+}
+document.getElementById("gameCreateForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const err=document.getElementById("newGameFormError");err.textContent="";
+  if(!currentUser){closeGameCreate();openAuth();return;}
+  const type=document.getElementById("newGameType").value;
+  const title=document.getElementById("newGameTitle").value.trim();
+  const description=document.getElementById("newGameDescription").value.trim();
+  const maturity=document.getElementById("newGameMaturity").value;
+  const pay=document.getElementById("newGamePay").value==="yes";
+  const price=Number(document.getElementById("newGamePrice").value);
+  const currency=document.getElementById("newGameCurrency").value;
+  try{
+    if(!title)throw Error("Enter a game name.");
+    if(pay && (!Number.isFinite(price)||price<=0))throw Error("Enter a price greater than 0.");
+    if(pay && price>999999999)throw Error("The price is too large.");
+    if(pay){
+      const {data:creatorMetxon,error:creatorResolveError}=await metxonClient.rpc("resolve_metpay_username",{p_username:currentProfile?.username||""});
+      if(creatorResolveError)throw Error("METPAY could not check your METACCOUNT link.");
+      if(!String(creatorMetxon||"").trim()){
+        closeGameCreate();
+        openMetxonAccountHelp();
+        return;
+      }
+    }
+    const {data,error}=await db.rpc("create_game",{p_title:title,p_description:description,p_game_type:type,p_maturity_rating:maturity});
+    if(error)throw Error(error.message||"Could not create the game.");
+    const g=Array.isArray(data)?data[0]:data;
+    if(!g?.id)throw Error("The game was created without an ID.");
+    const {data:configured,error:configError}=await db.rpc("set_game_play_price",{
+      p_game_id:g.id,p_pay_to_play:pay,p_play_price:pay?price:null,p_play_currency:pay?currency:"INR"
+    });
+    if(configError||!configured){
+      await db.from("games").delete().eq("id",g.id).eq("owner_id",currentUser.id);
+      throw Error(configError?.message||"Could not save the pay-to-play setting.");
+    }
+    closeGameCreate();
+    await openCreator(g.id);
+  }catch(x){console.error(x);err.textContent=x.message||"Game creation failed.";}
+});
 async function loadMyGames(){
   const el=document.getElementById("creatorContent");if(!el)return;
   const {data,error}=await db.from("games").select("*").eq("owner_id",currentUser.id).order("updated_at",{ascending:false});
   if(error){el.innerHTML=`<div class="notice bad">${esc(error.message)}</div>`;return;}
-  el.innerHTML=`<div class="section-title"><h2>My Games</h2><span>${data?.length||0} project(s)</span></div><div class="grid">${(data||[]).map(g=>`<article class="card"><div class="thumbnail">${g.game_type.toUpperCase()}</div><div class="card-body"><h3>${esc(g.title)}</h3><p>${esc(g.description||"")}</p><div class="meta"><span class="tag">${esc(g.status)}</span><span class="tag">${esc(g.game_type)}</span></div><button class="btn primary full" style="margin-top:10px" onclick="openCreator('${g.id}')">Open Creator</button></div></article>`).join("")||`<div class="empty">No games yet. Use Free Creator above.</div>`}</div>`;
+  el.innerHTML=`<div class="section-title"><h2>My Games</h2><span>${data?.length||0} project(s)</span></div><div class="grid">${(data||[]).map(g=>`<article class="card"><div class="thumbnail">${g.game_type.toUpperCase()}</div><div class="card-body"><h3>${esc(g.title)}</h3><p>${esc(g.description||"")}</p><div class="meta"><span class="tag">${esc(g.status)}</span><span class="tag">${esc(g.game_type)}</span>${g.pay_to_play?`<span class="tag">Pay ${Number(g.play_price).toLocaleString()} ${esc(g.play_currency)}</span>`:`<span class="tag">Free to play</span>`}</div><button class="btn primary full" style="margin-top:10px" onclick="openCreator('${g.id}')">Open Creator</button></div></article>`).join("")||`<div class="empty">No games yet. Use Free Creator above.</div>`}</div>`;
 }
 function defaultScene(){
   return [{id:crypto.randomUUID(),type:"player",x:100,y:300,width:40,height:40,color:"#35a8ff",rules:[{when:"game_start",do:"move_right",value:0}]},{id:crypto.randomUUID(),type:"platform",x:60,y:390,width:500,height:35,color:"#4d5d7a",rules:[]},{id:crypto.randomUUID(),type:"coin",x:300,y:330,width:25,height:25,color:"#ffd34e",rules:[{when:"touch_player",do:"add_score",value:10},{when:"touch_player",do:"delete"}]}];
@@ -914,7 +994,8 @@ async function openCreator(gameId){
   if(error){toast(error.message,"bad");return;}
   const {data:versions}=await db.from("game_versions").select("*").eq("game_id",gameId).eq("status","draft").order("version_number",{ascending:false}).limit(1);
   editor={game,version:versions?.[0]||null,objects:versions?.[0]?.asset_manifest?.objects||defaultScene(),selected:null,dirty:false,testMode:false,advanced:game.game_type==="3d",rules:{}};
-  if(currentPage!=="create")await navigate("create");else renderEditor();
+  if(currentPage!=="create")await navigate("create");
+  renderEditor();
 }
 function renderEditor(){
   const el=document.getElementById("creatorContent");if(!el)return;
@@ -922,7 +1003,7 @@ function renderEditor(){
   <div class="studio-shell"><div class="studio-bar"><div><b>${esc(editor.game.title)}</b><span class="tag" style="margin-left:8px">${esc(editor.game.game_type.toUpperCase())}</span></div><div class="studio-tabs"><button class="active">Scene</button><button onclick="openRulesPanel()">Rules</button><button onclick="addTimelineKey()">Timeline</button></div></div>
   <div class="studio-grid"><aside class="studio-side"><h3>Assets</h3><div class="tool-grid"><button onclick="addObject('player')">Player</button><button onclick="addObject('platform')">Platform</button><button onclick="addObject('enemy')">Enemy</button><button onclick="addObject('coin')">Coin</button><button onclick="addObject('text')">Text</button><button onclick="addObject('goal')">Goal</button></div><div style="margin-top:15px"><label>Upload asset</label><input type="file" id="assetUpload" accept="image/*" onchange="handleAssetUpload(this)"></div><div class="notice" style="margin-top:12px">Right-click an object to edit its rules. Each object can have its own rules.</div><h3 style="margin-top:18px">Objects</h3><div id="objectList" class="object-list"></div></aside>
   <section class="studio-center"><canvas id="gameCanvas" class="studio-canvas" width="900" height="500"></canvas><div class="small" style="margin-top:8px">Drag objects. Select one to edit its properties. Test uses the same scene data.</div><div class="timeline"><b>Timeline</b><div class="timeline-track" id="timelineTrack"></div></div><div class="rules" id="rulesPanel"><b>Rules</b><div id="rulesContent" class="small" style="margin-top:8px">Select an object and choose Rules.</div></div></section>
-  <aside class="studio-side right"><h3>Properties</h3><div id="properties"></div><hr style="border-color:#243047;margin:15px 0"><h3>Project</h3><div class="small">Status: ${esc(editor.game.status)}</div><div class="small">Workspace: ${isStudio()?"Studio":"Free Creator"}</div>${editor.advanced?`<div class="notice ok" style="margin-top:12px">Advanced tools active: 3D scene, camera, lighting, physics, Blox and MEX AI.</div><button class="btn full" style="margin-top:8px" onclick="openAdvancedTools()">Advanced Tools</button>`:`<div class="notice" style="margin-top:12px">Free Creator: 2D scene + visual rules.</div>`}</aside></div></div>`;
+  <aside class="studio-side right"><h3>Properties</h3><div id="properties"></div><hr style="border-color:#243047;margin:15px 0"><h3>Project</h3><div class="small">Status: ${esc(editor.game.status)}</div><div class="small">Workspace: ${isStudio()?"Studio":"Free Creator"}</div><div class="notice" style="margin-top:12px"><b>Play access</b><br>${editor.game.pay_to_play?`Players pay ${Number(editor.game.play_price).toLocaleString()} ${esc(editor.game.play_currency)} once via METPAY.`:`Free to play.`}</div>${editor.advanced?`<div class="notice ok" style="margin-top:12px">Advanced tools active: 3D scene, camera, lighting, physics, Blox and MEX AI.</div><button class="btn full" style="margin-top:8px" onclick="openAdvancedTools()">Advanced Tools</button>`:`<div class="notice" style="margin-top:12px">Free Creator: 2D scene + visual rules.</div>`}</aside></div></div>`;
   renderObjectList();renderProperties();drawEditor();renderRules();drawTimeline();
 }
 function addObject(type){
@@ -950,10 +1031,25 @@ function bindEditorCanvas(){
   c.onpointerup=c.onpointercancel=()=>drag=false;
 }
 function renderRules(){
-  const el=document.getElementById("rulesContent");if(!el)return;const o=editor.objects.find(x=>x.id===editor.selected);if(!o){el.textContent="Select an object.";return;}
-  const rules=o.rules||[];el.innerHTML=`<div class="form-row"><select id="ruleWhen"><option value="game_start">WHEN game starts</option><option value="clicked">WHEN clicked</option><option value="key_space">WHEN Space pressed</option><option value="touch_player">WHEN touching player</option></select><select id="ruleDo"><option value="move_right">DO move right</option><option value="jump">DO jump</option><option value="add_score">DO add score</option><option value="delete">DO delete object</option><option value="message">DO show message</option></select></div><div style="display:flex;gap:7px;margin-top:7px"><input id="ruleValue" placeholder="Value (e.g. 10 or message)"><button class="btn" onclick="addRule()">+ Add rule</button></div><div style="margin-top:10px">${rules.map((r,i)=>`<div class="rule"><span class="block when">${esc(r.when)}</span><span>→</span><span class="block do">${esc(r.do)}</span>${r.value!==undefined?`<span class="tag">${esc(r.value)}</span>`:""}<button class="btn danger" onclick="removeRule(${i})">×</button></div>`).join("")||`<div class="small">No rules yet.</div>`}</div>`;
+  const el=document.getElementById("rulesContent");if(!el)return;const o=editor.objects.find(x=>x.id===editor.selected);if(!o){el.innerHTML=`<div class="small">Select an object, then click <b>+ Add rule</b>.</div>`;return;}
+  const rules=o.rules||[];
+  el.innerHTML=`<div class="notice" style="margin-bottom:8px">Type what you want naturally. MetGames converts it into a valid rule and keeps the structured command. Example: <b>when right arrow key is pressed, then player jumps</b></div><div style="display:flex;gap:7px;align-items:center"><input id="naturalRule" style="flex:1" placeholder="When right arrow key is pressed, then player jumps" onkeydown="if(event.key==='Enter'){event.preventDefault();addNaturalRule()}"><button class="btn primary" onclick="addNaturalRule()">+ Add rule</button></div><div id="ruleParseStatus" class="small" style="margin-top:6px"></div><div style="margin-top:10px">${rules.map((r,i)=>`<div class="rule"><span class="block when">${esc(r.whenLabel||r.when)}</span><span>→</span><span class="block do">${esc(r.doLabel||r.do)}</span>${r.value!==undefined?`<span class="tag">${esc(r.value)}</span>`:""}<button class="btn danger" onclick="removeRule(${i})">×</button></div>`).join("")||`<div class="small">No rules yet.</div>`}</div>`;
 }
-function addRule(){const o=editor.objects.find(x=>x.id===editor.selected);if(!o)return;o.rules=o.rules||[];const value=document.getElementById("ruleValue").value.trim();o.rules.push({when:document.getElementById("ruleWhen").value,do:document.getElementById("ruleDo").value,value:value||undefined});editor.dirty=true;renderRules();}
+async function addNaturalRule(){
+  const o=editor.objects.find(x=>x.id===editor.selected);if(!o)return;
+  const input=document.getElementById("naturalRule"),status=document.getElementById("ruleParseStatus"),command=input?.value.trim();if(!command)return;
+  status.textContent="Converting rule…";
+  try{
+    const {data,error}=await db.functions.invoke("metgames-rule-parser",{body:{command}});
+    if(error||data?.error)throw Error(data?.message||data?.error||error?.message||"Rule could not be understood.");
+    const r=data.rule;
+    o.rules=o.rules||[];o.rules.push({...r,source:command,whenLabel:r.display.split(" → ")[0].replace(/^WHEN /,"") ,doLabel:r.display.split(" → ")[1]?.replace(/^DO /,"")||r.do});
+    editor.dirty=true;input.value="";status.innerHTML=`<span style="color:#79e29a">✓ Correct rule:</span> ${esc(r.display)}`;renderRules();
+  }catch(e){
+    status.innerHTML=`<span style="color:#ff7777">✕ ${esc(e.message||"Rule not understood.")}</span><br><span>Try: when right arrow key is pressed, then player jumps</span>`;
+  }
+}
+function addRule(){addNaturalRule();}
 function removeRule(i){const o=editor.objects.find(x=>x.id===editor.selected);if(!o)return;o.rules.splice(i,1);editor.dirty=true;renderRules();}
 function openRulesPanel(){document.getElementById("rulesPanel")?.scrollIntoView({behavior:"smooth"});}
 function addTimelineKey(){const track=document.getElementById("timelineTrack");if(!track)return;const key=document.createElement("div");key.className="key";key.style.left=Math.min(95,Math.random()*90)+"%";track.appendChild(key);editor.dirty=true;toast("Timeline keyframe added.");}
@@ -977,26 +1073,94 @@ async function publishCurrentGame(){
 function openRecovery(){const p=prompt("Set a recovery/import password for this game:");if(!p)return;db.rpc("set_game_recovery_password",{p_game_id:editor.game.id,p_password:p}).then(({error})=>error?toast(error.message,"bad"):toast("Recovery password saved.","ok"));}
 function toggleTestMode(){editor.testMode=!editor.testMode;toast(editor.testMode?"Test mode started.":"Test mode stopped.");if(editor.testMode)runRuntime(editor.objects,document.getElementById("gameCanvas"),true);}
 function runRuntime(objects,canvas,isEditor=false){
-  if(!canvas)return;const ctx=canvas.getContext("2d"),scene=objects.map(o=>({...o,rules:(o.rules||[]).map(r=>({...r}) )}));let player=scene.find(o=>o.type==="player")||scene[0];let keys={},score=0,vy=0,last=performance.now(),raf=0;
+  if(!canvas)return;const ctx=canvas.getContext("2d"),scene=objects.map(o=>({...o,rules:(o.rules||[]).map(r=>({...r}) )}));let player=scene.find(o=>o.type==="player")||scene[0];let keys={},score=0,vy=0,last=performance.now(),raf=0,started=false;
   const down=e=>{keys[e.key.toLowerCase()]=true;if(e.key===" ")keys.space=true},up=e=>{keys[e.key.toLowerCase()]=false;if(e.key===" ")keys.space=false};window.addEventListener("keydown",down);window.addEventListener("keyup",up);
-  function hit(a,b){return a.x<b.x+b.width&&a.x+a.width>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y}
-  function applyRule(o,r){if(r.do==="move_right")o.x+=Number(r.value||2);if(r.do==="jump"&&o===player&&player.y>=350)vy=-480;if(r.do==="add_score")score+=Number(r.value||10);if(r.do==="delete")o._deleted=true;if(r.do==="message")toast(String(r.value||"Rule message"))}
-  function loop(now){const dt=Math.min(.033,(now-last)/1000);last=now;if(keys.arrowleft||keys.a)player.x-=220*dt;if(keys.arrowright||keys.d)player.x+=220*dt;if((keys.space||keys.arrowup||keys.w)&&player.y>=350)vy=-480;vy+=1000*dt;player.y+=vy*dt;if(player.y>350){player.y=350;vy=0}player.x=Math.max(0,Math.min(canvas.width-player.width,player.x));scene.forEach(o=>(o.rules||[]).forEach(r=>{if(r.when==="game_start"&&now<last+dt*1000)applyRule(o,r);if(r.when==="touch_player"&&o!==player&&hit(player,o))applyRule(o,r)}));ctx.fillStyle=editor.advanced?"#08121a":"#101724";ctx.fillRect(0,0,canvas.width,canvas.height);scene.filter(o=>!o._deleted).forEach(o=>{ctx.fillStyle=o.color||"#fff";if(o.type==="coin"){ctx.beginPath();ctx.arc(o.x+o.width/2,o.y+o.height/2,o.width/2,0,Math.PI*2);ctx.fill()}else if(o.type==="text"){ctx.font="22px Arial";ctx.fillText(o.text||"",o.x,o.y+25)}else ctx.fillRect(o.x,o.y,o.width,o.height)});ctx.fillStyle="#fff";ctx.font="15px Arial";ctx.fillText(`Score: ${score}`,15,24);if(editor.testMode||!isEditor)raf=requestAnimationFrame(loop)}loop(performance.now());return()=>{cancelAnimationFrame(raf);window.removeEventListener("keydown",down);window.removeEventListener("keyup",up)};}
-function openAdvancedStudio(){if(!isStudio()){openPlans();return;}const gameType=confirm("Advanced Studio will create a 3D project. Continue?");if(!gameType)return;startNewGame("3d");}
+  canvas.onclick=()=>{scene.forEach(o=>(o.rules||[]).forEach(r=>{if(r.when==="clicked")applyRule(o,r)}))};
+  function hit(a,b){return a&&b&&a.x<b.x+b.width&&a.x+a.width>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y}
+  function targetObject(o,r){return r.target==="player"?player:o}
+  function applyRule(o,r){const t=targetObject(o,r);if(r.do==="move_right")t.x+=Number(r.value||2);if(r.do==="move_left")t.x-=Number(r.value||2);if(r.do==="jump"&&t===player&&player.y>=350)vy=-480;if(r.do==="add_score")score+=Number(r.value||10);if(r.do==="delete")o._deleted=true;if(r.do==="message")toast(String(r.value||"Rule message"))}
+  function loop(now){const dt=Math.min(.033,(now-last)/1000);last=now;if(!started){scene.forEach(o=>(o.rules||[]).forEach(r=>{if(r.when==="game_start")applyRule(o,r)}));started=true;}if(keys.arrowleft||keys.a)player.x-=220*dt;if(keys.arrowright||keys.d)player.x+=220*dt;if((keys.space||keys.arrowup||keys.w)&&player.y>=350)vy=-480;vy+=1000*dt;player.y+=vy*dt;if(player.y>350){player.y=350;vy=0}player.x=Math.max(0,Math.min(canvas.width-player.width,player.x));scene.forEach(o=>(o.rules||[]).forEach(r=>{if(r.when==="key_right"&&keys.arrowright)applyRule(o,r);if(r.when==="key_left"&&keys.arrowleft)applyRule(o,r);if(r.when==="key_space"&&keys.space)applyRule(o,r);if(r.when==="key_up"&&keys.arrowup)applyRule(o,r);if(r.when==="key_down"&&keys.arrowdown)applyRule(o,r);if(r.when==="touch_player"&&o!==player&&hit(player,o))applyRule(o,r)}));ctx.fillStyle=editor.advanced?"#08121a":"#101724";ctx.fillRect(0,0,canvas.width,canvas.height);scene.filter(o=>!o._deleted).forEach(o=>{ctx.fillStyle=o.color||"#fff";if(o.type==="coin"){ctx.beginPath();ctx.arc(o.x+o.width/2,o.y+o.height/2,o.width/2,0,Math.PI*2);ctx.fill()}else if(o.type==="text"){ctx.font="22px Arial";ctx.fillText(o.text||"",o.x,o.y+25)}else ctx.fillRect(o.x,o.y,o.width,o.height)});ctx.fillStyle="#fff";ctx.font="15px Arial";ctx.fillText(`Score: ${score}`,15,24);if(editor.testMode||!isEditor)raf=requestAnimationFrame(loop)}loop(performance.now());return()=>{cancelAnimationFrame(raf);window.removeEventListener("keydown",down);window.removeEventListener("keyup",up);canvas.onclick=null};}
+function openAdvancedStudio(){if(!isStudio()){openPlans();return;}const gameType=confirm("Advanced Studio will create a 3D project. Continue?");if(!gameType)return;openGameCreate("3d");}
 function openAdvancedTools(){toast("Advanced tools: camera, lighting, physics, animation, Blox and MEX AI are available in this workspace.");const panel=document.getElementById("properties");if(panel)panel.insertAdjacentHTML("beforeend",`<div class="notice ok" style="margin-top:12px"><b>Advanced tools</b><br>Camera: orbit/zoom<br>Lighting: scene lights<br>Physics: gravity/collisions<br>Animation: keyframes<br>Blox: visual code<br>MEX AI: idea/rule assistant</div><button class="btn" style="margin-top:8px" onclick="mexAI()">Ask MEX AI</button>`);}
 async function mexAI(){if(!isStudio()){openPlans();return;}const q=prompt("Tell MEX AI what you want your game to do:");if(!q)return;toast("MEX AI is thinking…");try{const {data,error}=await db.functions.invoke("mex-ai",{body:{message:q,context:{game:editor.game?.title,objects:editor.objects}}});if(error)throw Error(error.message);if(data?.error)throw Error(data.error);openGeneric(`<div class="head"><div><h2>MEX AI</h2><p>Advanced Studio assistant</p></div><button class="btn" onclick="closeGeneric()">Close</button></div><div class="notice ok" style="white-space:pre-wrap">${esc(data?.reply||"MEX AI returned no text.")}</div>`);}catch(x){toast(x.message||"MEX AI is not configured yet on the server.","bad");}}
 async function renderGame(gameId){
-  const {data:game,error}=await db.from("games").select("id,title,description,game_type,maturity_rating,owner_id,published_at,creator_name_snapshot").eq("id",gameId).eq("status","published").single();
+  const {data:game,error}=await db.from("games").select("id,title,description,game_type,maturity_rating,owner_id,published_at,creator_name_snapshot,pay_to_play,play_price,play_currency").eq("id",gameId).eq("status","published").single();
   if(error){setApp(`<div class="empty">Game not found or not published.</div>`);return;}
   const {data:version,error:ve}=await db.from("game_versions").select("*").eq("game_id",gameId).eq("status","published").order("version_number",{ascending:false}).limit(1).maybeSingle();
   if(ve||!version){setApp(`<div class="empty">Published game build is unavailable.</div>`);return;}
   const {data:creator}=await db.from("profiles").select("username,display_name,creator_rating,followers_count").eq("id",game.owner_id).maybeSingle();
-  setApp(`<div class="player-shell"><div class="player-top"><button class="btn" onclick="navigate('play')">← Back</button><div class="status">METGAMES RUNTIME</div></div><canvas id="playCanvas" width="900" height="506"></canvas><div class="play-info"><h1>${esc(game.title)}</h1><p class="small">${esc(game.description||"No description")}</p><div class="meta"><span class="tag">${esc(game.game_type.toUpperCase())}</span><span class="tag">${esc(game.maturity_rating)}</span><span class="tag">@${esc(creator?.username||game.creator_name_snapshot||"creator")}</span></div><div class="rating-row">${[1,2,3,4,5].map(n=>`<button class="star" onclick="rateGame('${game.id}',${n})">★</button>`).join("")}</div></div></div>`);
-  if(!currentUser){const c=document.getElementById("playCanvas"),x=c.getContext("2d");x.fillStyle="#101724";x.fillRect(0,0,c.width,c.height);x.fillStyle="#fff";x.font="bold 28px Arial";x.textAlign="center";x.fillText("Login required to play",c.width/2,c.height/2);x.font="16px Arial";x.fillStyle="#9aa7b9";x.fillText("Click Login to start.",c.width/2,c.height/2+35);c.onclick=openAuth;return;}
+  const priceLabel=game.pay_to_play?`Pay ${Number(game.play_price).toLocaleString()} ${esc(game.play_currency)} once via METPAY`:`Free to play`;
+  setApp(`<div class="player-shell"><div class="player-top"><button class="btn" onclick="navigate('play')">← Back</button><div class="status">METGAMES RUNTIME</div></div><canvas id="playCanvas" width="900" height="506"></canvas><div class="play-info"><h1>${esc(game.title)}</h1><p class="small">${esc(game.description||"No description")}</p><div class="meta"><span class="tag">${esc(game.game_type.toUpperCase())}</span><span class="tag">${esc(game.maturity_rating)}</span><span class="tag">@${esc(creator?.username||game.creator_name_snapshot||"creator")}</span><span class="tag">${priceLabel}</span></div><div id="gameAccessPanel"></div><div class="rating-row">${[1,2,3,4,5].map(n=>`<button class="star" onclick="rateGame('${game.id}',${n})">★</button>`).join("")}</div></div></div>`);
+  if(!currentUser){
+    const c=document.getElementById("playCanvas"),x=c.getContext("2d");x.fillStyle="#101724";x.fillRect(0,0,c.width,c.height);x.fillStyle="#fff";x.font="bold 28px Arial";x.textAlign="center";x.fillText("Login required to play",c.width/2,c.height/2);x.font="16px Arial";x.fillStyle="#9aa7b9";x.fillText("Click Login to start.",c.width/2,c.height/2+35);c.onclick=openAuth;return;
+  }
+
+  let access=true;
+  if(game.pay_to_play && game.owner_id!==currentUser.id){
+    const {data:purchase,error:purchaseError}=await db.from("game_play_purchases").select("id,status,amount,currency,paid_at").eq("game_id",game.id).eq("payer_id",currentUser.id).eq("status","paid").maybeSingle();
+    if(purchaseError){
+      console.error(purchaseError);
+      access=false;
+      showGamePaywall(game,"Payment access could not be checked right now. Please try again.");
+    }else if(!purchase){
+      access=false;
+      showGamePaywall(game);
+    }
+  }
+  if(!access)return;
+
   const {data:q,error:qe}=await db.rpc("increment_game_launch",{p_game_id:game.id});
   if(qe){toast("Launch tracking is unavailable; starting the game anyway.","warn");}
   else{const r=Array.isArray(q)?q[0]:q;if(r?.ok===false){toast(r.reason==="LIMIT_EXCEEDED"?`Daily play limit reached (${r.limit_count}).`:`Unable to start: ${r.reason||"unknown"}`,"bad");return;}}
   runRuntime(version.asset_manifest?.objects||[],document.getElementById("playCanvas"),false);
+}
+function showGamePaywall(game,message=""){
+  const panel=document.getElementById("gameAccessPanel");
+  if(!panel)return;
+  const price=`${Number(game.play_price).toLocaleString()} ${esc(game.play_currency)}`;
+  panel.innerHTML=`<div class="notice" style="margin-top:14px"><b>Pay to play</b><br>This creator requires a one-time METPAY purchase of <b>${price}</b> before you can play this game.<br><span class="small">METPAY settles through the fictional METXON JP ledger in this prototype.</span>${message?`<br><span class="form-error">${esc(message)}</span>`:""}<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"><button class="btn primary" onclick="startGamePurchase('${game.id}')">Pay with METPAY</button><button class="btn" onclick="openMetxonAccountHelp()">METACCOUNT help</button></div></div>`;
+  const c=document.getElementById("playCanvas"),x=c?.getContext("2d");if(c&&x){x.fillStyle="#101724";x.fillRect(0,0,c.width,c.height);x.fillStyle="#fff";x.font="bold 28px Arial";x.textAlign="center";x.fillText("Purchase required",c.width/2,c.height/2);x.font="16px Arial";x.fillStyle="#9aa7b9";x.fillText(`Pay ${Number(game.play_price).toLocaleString()} ${game.play_currency} via METPAY`,c.width/2,c.height/2+35);}
+}
+function openMetxonAccountHelp(){
+  openGeneric(`<div class="head"><div><h2>METACCOUNT required</h2><p>METPAY needs a linked METXON account.</p></div><button class="btn" onclick="closeGeneric()">Close</button></div><div class="notice">If you do not have a METACCOUNT, create one on METXON first. Then return to METGAMES and use the same linked username.</div><div style="display:flex;gap:10px;justify-content:flex-end;margin-top:15px"><a class="btn primary" href="https://nidhilarthicknet.github.io/metxon/" target="_blank" rel="noopener">Open METXON</a></div>`);
+}
+async function startGamePurchase(gameId){
+  if(!currentUser){openAuth();return;}
+  try{
+    toast("Preparing METPAY…");
+    const {data:start,error:startError}=await db.functions.invoke("metgames-payment",{body:{action:"start_game_purchase",gameId}});
+    if(startError)throw Error(startError.message||"Could not start the game purchase.");
+    if(start?.error)throw Error(start.error);
+    if(start?.free||start?.creator||start?.already_paid){toast("Game access is ready.","ok");await renderGame(gameId);return;}
+
+    const username=String(currentProfile?.username||"").trim().toLowerCase();
+    const {data:resolvedName,error:resolveError}=await metxonClient.rpc("resolve_metpay_username",{p_username:username});
+    if(resolveError)throw Error("METPAY could not check the linked METACCOUNT.");
+    const metxonUsername=String(resolvedName||"").trim();
+    if(!metxonUsername){openMetxonAccountHelp();return;}
+
+    const authResponse=await fetch(METXON_AUTH_FUNCTION,{method:"POST",headers:{"Content-Type":"application/json","apikey":METXON_KEY},body:JSON.stringify({action:"login",username:metxonUsername,password:prompt("Enter your METACCOUNT / METXON password to authorize this METPAY game purchase. It is not stored by MetGames:")||""})});
+    const authData=await authResponse.json().catch(()=>({}));
+    if(!authResponse.ok||!authData.session)throw Error(authData.error||"METACCOUNT password was not accepted.");
+    const {error:setError}=await metxonClient.auth.setSession({access_token:authData.session.access_token,refresh_token:authData.session.refresh_token});
+    if(setError)throw Error("METPAY could not open the METXON session.");
+
+    const {data:transfer,error:transferError}=await metxonClient.rpc("metxon_transfer_game_purchase",{p_payer_username:metxonUsername,p_creator_username:start.creator_metxon_username,p_amount_jp:Number(start.settlement_jp),p_reference:String(start.reference)});
+    if(transferError)throw Error(transferError.message||"METPAY transfer failed.");
+    if(transfer?.error)throw Error(transfer.error);
+
+    const oldSession=(await metxonClient.auth.getSession()).data.session;
+    if(!oldSession?.access_token)throw Error("METPAY session could not be verified.");
+    const {data:complete,error:completeError}=await db.functions.invoke("metgames-payment",{body:{action:"complete_game_purchase",gameId,reference:start.reference,oldAccessToken:oldSession.access_token}});
+    if(completeError)throw Error(completeError.message||"Purchase could not be finalized.");
+    if(complete?.error)throw Error(complete.error);
+    await metxonClient.auth.signOut();
+    toast(`METPAY payment completed. You can now play ${start.purchase?.game_id===gameId?"the game":"this game"}.`,"ok");
+    await renderGame(gameId);
+  }catch(x){
+    try{await metxonClient.auth.signOut();}catch{}
+    toast(x.message||"METPAY game purchase could not be completed.","bad");
+  }
 }
 async function rateGame(gameId,rating){if(!currentUser){openAuth();return;}const {error}=await db.from("game_ratings").upsert({game_id:gameId,reviewer_id:currentUser.id,rating},{onConflict:"game_id,reviewer_id"});if(error)toast(error.message,"bad");else toast("Rating saved.","ok");}
 
@@ -1035,6 +1199,8 @@ async function openPlans(){
   grid.innerHTML=(data||[]).map(p=>{const id=p.id;const local=PLANS[id]||{name:p.name,jp:p.price_jp_week,storage:(p.storage_limit_bytes/1073741824).toFixed(0)+" GB",studio:p.is_studio,trailer:p.can_create_trailers,ads:p.can_create_ads};return `<div class="plan-card ${id==="gold"?"featured":""}"><h3>${esc(local.name)}</h3><div class="price">${Number(p.price_jp_week).toLocaleString()} JP <small>/ week</small></div><div class="small">${esc(local.storage)} workspace</div><ul class="plan-list"><li>${p.is_studio?"Advanced Studio":"Free Creator"}</li><li>${p.can_create_trailers?"Trailer creation":"No trailer creation"}</li><li>${p.can_create_ads?"Create ads + place ads":"No ad creation"}</li><li>Temporary creation workspace</li></ul>${id==="free"?`<button class="btn full" onclick="closePlans()">Continue free</button>`:`<button class="btn primary full" onclick="startPayment('${id}')">${currentEntitlement?.plan_id===id?"Renew":"Upgrade to "+esc(local.name)}</button>`}</div>`}).join("");
 }
 function closePlans(){document.getElementById("plansModal").classList.remove("open");}
+function openGeneric(html){document.getElementById("genericModalBox").innerHTML=html;document.getElementById("genericModal").classList.add("open");}
+function closeGeneric(){document.getElementById("genericModal").classList.remove("open");document.getElementById("genericModalBox").innerHTML="";}
 async function startPayment(planId){
   if(!currentUser){closePlans();openAuth();return;}
   const currency=prompt("METPAY display currency (INR/USD/GBP/EUR/AED):","INR")?.trim().toUpperCase()||"INR";
@@ -1047,13 +1213,18 @@ async function startPayment(planId){
     if(start?.error)throw Error(start.error);
 
     const username=String(currentProfile?.username||"").trim().toLowerCase();
+    const {data:resolvedName,error:resolveError}=await metxonClient.rpc("resolve_metpay_username",{p_username:username});
+    if(resolveError)throw Error("METPAY could not link your METGAMES username to a METXON account.");
+    const metxonUsername=String(resolvedName||"").trim();
+    if(!metxonUsername)throw Error("No linked METXON account was found for this METGAMES username.");
+
     const authResponse=await fetch(METXON_AUTH_FUNCTION,{
       method:"POST",
       headers:{"Content-Type":"application/json","apikey":METXON_KEY},
-      body:JSON.stringify({action:"login",username,password:metxonPassword})
+      body:JSON.stringify({action:"login",username:metxonUsername,password:metxonPassword})
     });
     const authData=await authResponse.json().catch(()=>({}));
-    if(!authResponse.ok||!authData.session)throw Error(authData.error||"METXON authentication failed.");
+    if(!authResponse.ok||!authData.session)throw Error(authData.error||"METXON password is invalid for the linked account.");
 
     const {error:setError}=await metxonClient.auth.setSession({
       access_token:authData.session.access_token,
@@ -1094,7 +1265,7 @@ async function boot(){
   const h=location.hash;
   if(h.startsWith("#game/"))await navigate("game",{gameId:h.slice(6)});else await navigate((h.replace("#","")||"home"));
 }
-window.addEventListener("hashchange",()=>{const h=location.hash;if(h.startsWith("#game/"))navigate("game",{gameId:h.slice(6)});else if(h)navigate(h.slice(1));});
+window.addEventListener("hashchange",()=>{const h=location.hash;if(h.startsWith("#game/")){if(currentPage!=="game")navigate("game",{gameId:h.slice(6)});}else if(h&&h.slice(1)!==currentPage){navigate(h.slice(1));}});
 window.addEventListener("error",e=>{console.error(e.error||e.message);if(document.getElementById("app"))toast("METGAMES browser error: "+(e.message||"unknown"),"bad");});
 boot();
 </script>
