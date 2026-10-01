@@ -865,3194 +865,1909 @@ Import Trailer
 </div>
 `;
 }<script>
-const SUPABASE_URL="https://xnnnxinsnedjafltsuqo.supabase.co";
-const SUPABASE_KEY="sb_publishable_86rJNEFS_sOXfsZZ6gr4ow_sLngjj_i";
-const PUBLIC_BUCKET="metgames-public";
+async function createTrailerNow(){
+try{
+const video=$("trVideo").files[0];
+const imgs=[...$("trImages").files];
+const audio=$("trAudio").files[0];
 
-const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{
-  auth:{
-    persistSession:false,
-    autoRefreshToken:true,
-    detectSessionInUrl:false
-  }
+let mode=video?"video":"slideshow";
+let mediaUrl=null;
+let audioUrl=null;
+let imageManifest=[];
+
+if(video){
+const d=await duration(video);
+if(d>60)
+throw Error("Trailer video must be 1 minute or less.");
+
+const u=await upload(video,"trailers/video");
+mediaUrl=u.url;
+}
+
+if(imgs.length){
+for(const f of imgs){
+const u=await upload(f,"trailers/images");
+imageManifest.push({
+url:u.url,
+name:f.name
 });
+}
+}
 
-const S={
-  user:null,
-  profile:null,
-  ent:null,
-  plans:[],
-  route:"home",
-  authMode:"login",
-  objects:[],
-  selected:null,
-  game:null
+if(audio){
+const u=await upload(audio,"trailers/audio");
+audioUrl=u.url;
+}
+
+const payload={
+trailer_title:$("trTitle").value,
+game_id:$("trGame").value||null,
+game_type:$("trType").value,
+age_rating:$("trAge").value,
+platform:$("trPlatform").value,
+release_text:$("trRelease").value,
+where_to_play:$("trWhere").value,
+short_description:$("trDesc").value,
+media_mode:mode,
+media_url:mediaUrl,
+audio_path:audioUrl,
+image_manifest:imageManifest
 };
 
-const $=id=>document.getElementById(id);
-
-const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({
-  "&":"&amp;",
-  "<":"&lt;",
-  ">":"&gt;",
-  '"':"&quot;",
-  "'":"&#039;"
-}[c]));
-
-const plan=()=>S.ent?.plan_id||"free";
-
-const planName=()=>({
-  free:"Free",
-  base:"Base",
-  silver:"Silver",
-  gold:"Gold"
-}[plan()]||"Free");
-
-const logged=()=>!!S.user;
-
-function toast(m){
-  $("toast").textContent=m;
-  $("toast").classList.add("show");
-  clearTimeout(window._tt);
-  window._tt=setTimeout(
-    ()=>$("toast").classList.remove("show"),
-    3400
-  );
+const {
+data,
+error
+}=await db.functions.invoke(
+"metgames-media",
+{
+body:{
+action:"create_trailer",
+payload
 }
-
-function msg(el,m,type=""){
-  el.innerHTML='<div class="notice '+type+'">'+esc(m)+'</div>';
 }
-
-function loading(){
-  const l=$("loader");
-  l.classList.add("show");
-  setTimeout(()=>l.classList.remove("show"),950);
-}
-
-function go(r){
-  if(location.hash.slice(1)!==r)
-    location.hash=r;
-  else
-    render();
-}
-
-window.addEventListener("hashchange",()=>{
-  loading();
-  setTimeout(render,430);
-});
-
-document.querySelectorAll("[data-route]").forEach(
-  b=>b.onclick=()=>go(b.dataset.route)
 );
 
-if($("year"))
-  $("year").textContent=new Date().getFullYear();
+if(error||data?.error)
+throw Error(
+data?.error||
+error?.message||
+"Trailer could not be created."
+);
 
-
-/* =========================================================
-   AUTH / ACCOUNT
-========================================================= */
-
-async function userState(){
-
-  const {
-    data:{user}
-  }=await db.auth.getUser();
-
-  S.user=user||null;
-
-  if(!S.user){
-    S.profile=null;
-    S.ent=null;
-    return;
-  }
-
-  const [p,e,plans]=await Promise.all([
-
-    db.from("profiles")
-      .select("*")
-      .eq("id",S.user.id)
-      .maybeSingle(),
-
-    db.from("creator_entitlements")
-      .select("*")
-      .eq("user_id",S.user.id)
-      .maybeSingle(),
-
-    db.from("subscription_plans")
-      .select("*")
-      .order("id")
-  ]);
-
-  S.profile=p.data||null;
-
-  S.ent=e.data||{
-    plan_id:"free",
-    status:"active",
-    storage_limit_bytes:10737418240
-  };
-
-  S.plans=plans.data||[];
+if(data?.trailer_id){
+await db.functions.invoke(
+"metgames-media",
+{
+body:{
+action:"publish_trailer",
+trailer_id:data.trailer_id
+}
+}
+);
 }
 
+toast("Trailer imported and published.");
+closeGeneric();
+loadTrailers();
 
-function updateHeader(){
-
-  $("plan").textContent=planName();
-
-  $("avatar").textContent=(
-    S.profile?.display_name||
-    S.profile?.username||
-    "?"
-  ).slice(0,1).toUpperCase();
-
-  $("auth").textContent=
-    logged()?"Log out":"Log in / Join";
-
-  $("auth").onclick=async()=>{
-
-    if(logged()){
-
-      await db.auth.signOut();
-
-      S.user=null;
-      S.profile=null;
-      S.ent=null;
-
-      updateHeader();
-      go("home");
-
-    }else{
-
-      openAuth("login");
-
-    }
-  };
+}catch(e){
+toast(friendly(e.message));
+}
 }
 
+function duration(file){
+return new Promise((resolve,reject)=>{
+const u=URL.createObjectURL(file);
+const el=document.createElement("video");
 
-function requireLogin(){
-
-  if(!logged()){
-    openAuth("login");
-    return false;
-  }
-
-  return true;
-}
-
-
-/* =========================================================
-   ROUTING
-========================================================= */
-
-function render(){
-
-  const r=location.hash.slice(1)||"home";
-
-  S.route=r;
-
-  document
-    .querySelectorAll(".page")
-    .forEach(p=>p.classList.remove("active"));
-
-  const page=$(r)||$("home");
-
-  page.classList.add("active");
-
-  document
-    .querySelectorAll("[data-route]")
-    .forEach(b=>{
-      b.classList.toggle(
-        "active",
-        b.dataset.route===r
-      );
-    });
-
-  if(r==="play")
-    loadGames();
-
-  if(r==="trailers")
-    loadTrailers();
-
-  if(r==="create")
-    renderCreate();
-
-  if(r==="profile")
-    renderProfile();
-
-  if(r==="freecreator"){
-
-    if(requireLogin())
-      initCreator();
-
-  }
-
-  if(r==="advanced"){
-
-    if(
-      requireLogin() &&
-      ["base","silver","gold"].includes(plan())
-    ){
-
-    }else if(logged()){
-
-      go("create");
-
-    }
-  }
-}
-
-
-/* =========================================================
-   LOGIN / JOIN
-========================================================= */
-
-function openAuth(mode="login"){
-
-  S.authMode=mode;
-
-  setAuthMode(mode);
-
-  $("authModal").classList.add("show");
-}
-
-
-function setAuthMode(mode){
-
-  S.authMode=mode;
-
-  $("loginTab")
-    .classList
-    .toggle("active",mode==="login");
-
-  $("joinTab")
-    .classList
-    .toggle("active",mode==="signup");
-
-  $("displayWrap")
-    .classList
-    .toggle("hidden",mode!=="signup");
-
-  $("ageWrap")
-    .classList
-    .toggle("hidden",mode!=="signup");
-
-  $("authSubmit").textContent=
-    mode==="signup"
-      ?"Create account"
-      :"Log in";
-
-  $("authMsg").innerHTML="";
-}
-
-
-$("loginTab").onclick=()=>{
-  setAuthMode("login");
+el.onloadedmetadata=()=>{
+URL.revokeObjectURL(u);
+resolve(Number(el.duration)||0);
 };
 
-$("joinTab").onclick=()=>{
-  setAuthMode("signup");
+el.onerror=()=>{
+URL.revokeObjectURL(u);
+reject(
+Error("Could not read the media duration.")
+);
 };
 
-$("authCancel").onclick=()=>{
-  $("authModal").classList.remove("show");
+el.src=u;
+};
+}
+
+let editorBound=false;
+
+function initCreator(){
+if(!editorBound){
+bindEditor();
+editorBound=true;
+}
+
+if(!S.game)
+resetGame();
+}
+
+function resetGame(){
+S.game={
+id:null,
+title:"Untitled Game",
+description:"",
+maturity:"all",
+recovery:"",
+background:null
 };
 
+S.objects=[];
+S.selected=null;
 
-$("authForm").onsubmit=async e=>{
+draw();
+props();
+}
 
-  e.preventDefault();
+function draw(){
+const c=$("canvas");
 
-  const btn=$("authSubmit");
+if(!c)return;
 
-  btn.disabled=true;
+c.style.backgroundImage=
+S.game?.background
+?`url("${S.game.background}")`
+:"";
 
-  const body={
-    action:S.authMode,
-    username:$("username").value.trim(),
-    password:$("password").value
-  };
+c.style.backgroundSize="cover";
+c.innerHTML="";
 
-  if(S.authMode==="signup"){
+S.objects.forEach(o=>{
+const d=document.createElement("div");
 
-    body.displayName=
-      $("displayName").value.trim();
+d.className=
+"obj"+
+(o.id===S.selected?" sel":"");
 
-    body.ageCategory=
-      $("age").value;
-  }
+d.style.left=o.x+"%";
+d.style.top=o.y+"%";
+d.style.width=o.w+"%";
+d.style.height=o.h+"%";
+d.style.transform=
+`rotate(${o.r}deg)`;
 
-  const {
-    data,
-    error
-  }=await db.functions.invoke(
-    "metgames-auth",
-    {body}
-  );
+if(o.url){
 
-  if(error||data?.error){
+const im=document.createElement("img");
 
-    msg(
-      $("authMsg"),
-      friendly(data?.error||error?.message),
-      "err"
+im.src=o.url;
+d.appendChild(im);
+
+}else{
+
+d.innerHTML=
+"<span>"+
+esc(o.text)+
+"</span>";
+
+}
+
+d.onclick=()=>{
+S.selected=o.id;
+draw();
+props();
+};
+
+d.oncontextmenu=e=>{
+e.preventDefault();
+
+S.selected=o.id;
+
+$("ruleInfo").textContent=
+`Rules for ${o.text}: WHEN clicked → ADD 10 TO SCORE → DELETE OBJECT`;
+
+draw();
+props();
+};
+
+c.appendChild(d);
+});
+}
+
+function props(){
+const p=$("props");
+
+const o=
+S.objects.find(
+x=>x.id===S.selected
+);
+
+if(!o){
+p.textContent="Select an object.";
+return;
+}
+
+p.innerHTML=`
+<div class="form">
+
+<div class="field">
+<label>Text</label>
+<input id="pxtext"
+value="${esc(o.text)}">
+</div>
+
+<div class="row">
+
+<div class="field">
+<label>X %</label>
+<input id="px"
+type="number"
+value="${o.x}">
+</div>
+
+<div class="field">
+<label>Y %</label>
+<input id="py"
+type="number"
+value="${o.y}">
+</div>
+
+</div>
+
+<div class="row">
+
+<div class="field">
+<label>Width %</label>
+<input id="pw"
+type="number"
+value="${o.w}">
+</div>
+
+<div class="field">
+<label>Height %</label>
+<input id="ph"
+type="number"
+value="${o.h}">
+</div>
+
+</div>
+
+<div class="field">
+<label>Rotation</label>
+<input id="pr"
+type="number"
+value="${o.r}">
+</div>
+
+<button
+class="btn"
+id="editRule">
+Edit Rules
+</button>
+
+</div>
+`;
+
+[
+"pxtext",
+"px",
+"py",
+"pw",
+"ph",
+"pr"
+].forEach(id=>{
+$(id).oninput=()=>{
+
+o.text=$("pxtext").value;
+o.x=+$("px").value;
+o.y=+$("py").value;
+o.w=+$("pw").value;
+o.h=+$("ph").value;
+o.r=+$("pr").value;
+
+draw();
+
+};
+});
+
+$("editRule").onclick=()=>{
+$("ruleInfo").textContent=
+`Rules for ${o.text}: WHEN clicked → ADD 10 TO SCORE → DELETE OBJECT`;
+};
+}
+
+function bindEditor(){
+
+$("newGame").onclick=
+resetGame;
+
+$("bgTool").onclick=
+()=>$("bgFile").click();
+
+$("objTool").onclick=
+()=>$("objFile").click();
+
+$("textTool").onclick=()=>{
+const o={
+id:crypto.randomUUID(),
+text:"New Object",
+x:40,
+y:40,
+w:20,
+h:12,
+r:0,
+url:null
+};
+
+S.objects.push(o);
+S.selected=o.id;
+
+draw();
+props();
+};
+
+$("dupTool").onclick=()=>{
+const o=
+S.objects.find(
+x=>x.id===S.selected
+);
+
+if(!o)return;
+
+const n={
+...o,
+id:crypto.randomUUID(),
+x:Math.min(78,o.x+5),
+y:Math.min(78,o.y+5)
+};
+
+S.objects.push(n);
+S.selected=n.id;
+
+draw();
+props();
+};
+
+$("delTool").onclick=()=>{
+S.objects=
+S.objects.filter(
+x=>x.id!==S.selected
+);
+
+S.selected=null;
+
+draw();
+props();
+};
+
+$("bgFile").onchange=async e=>{
+try{
+
+const file=e.target.files[0];
+
+if(!file)return;
+
+const u=
+await upload(
+file,
+"games/backgrounds"
+);
+
+S.game.background=u.url;
+
+draw();
+
+toast("Background uploaded.");
+
+}catch(x){
+toast(x.message);
+}
+};
+
+$("objFile").onchange=async e=>{
+try{
+
+const file=e.target.files[0];
+
+if(!file)return;
+
+const u=
+await upload(
+file,
+"games/objects"
+);
+
+const o={
+id:crypto.randomUUID(),
+text:file.name,
+x:10,
+y:10,
+w:22,
+h:22,
+r:0,
+url:u.url,
+path:u.path
+};
+
+S.objects.push(o);
+S.selected=o.id;
+
+draw();
+props();
+
+toast("Object uploaded.");
+
+}catch(x){
+toast(x.message);
+}
+};
+
+$("saveGame").onclick=
+()=>saveGame(false);
+
+$("publishGame").onclick=
+()=>saveGame(true);
+
+$("testGame").onclick=
+testGame;
+
+}
+
+function manifest(){
+
+return{
+engine:"metgames-2d",
+schema:2,
+
+background:S.game.background,
+
+objects:S.objects,
+
+rules:S.objects.map(o=>({
+objectId:o.id,
+blocks:[
+"WHEN clicked",
+"ADD 10 TO SCORE",
+"DELETE OBJECT"
+]
+})),
+
+timeline:{
+frames:[
+{
+time:0
+}
+]
+}
+
+};
+
+}
+
+async function saveGame(publish){
+
+if(!requireLogin())
+return;
+
+const title=
+prompt(
+"Game title:",
+S.game.title
+);
+
+if(title===null)
+return;
+
+const desc=
+prompt(
+"Short description:",
+S.game.description
+);
+
+if(desc===null)
+return;
+
+const mat=
+prompt(
+"Maturity rating: all, 7+, 12+, 13+, 16+, 18+",
+S.game.maturity
+);
+
+if(mat===null)
+return;
+
+const recovery=
+prompt(
+"Recovery password (8–128 chars). Separate from account password:",
+S.game.recovery
+);
+
+if(
+!recovery||
+recovery.length<8
+){
+toast(
+"Recovery password must be at least 8 characters."
+);
+return;
+}
+
+S.game.title=title.trim();
+S.game.description=desc.trim();
+S.game.maturity=mat.trim();
+S.game.recovery=recovery;
+
+let id=S.game.id;
+
+if(!id){
+
+const {
+data,
+error
+}=await db.rpc(
+"create_game",
+{
+p_title:S.game.title,
+p_description:S.game.description,
+p_game_type:"2d",
+p_maturity_rating:S.game.maturity
+}
+);
+
+if(error){
+toast(
+friendly(error.message)
+);
+return;
+}
+
+id=data.id;
+S.game.id=id;
+
+}
+
+const {
+error:re
+}=await db.rpc(
+"set_game_recovery_password",
+{
+p_game_id:id,
+p_password:recovery
+}
+);
+
+if(re){
+toast(
+friendly(re.message)
+);
+return;
+}
+
+const {
+error:ve
+}=await db
+.from("game_versions")
+.update({
+asset_manifest:manifest()
+})
+.eq("game_id",id)
+.eq("status","draft")
+.eq("created_by",S.user.id);
+
+if(ve){
+toast(
+"Draft could not be saved."
+);
+return;
+}
+
+if(publish){
+
+const {
+error
+}=await db.rpc(
+"publish_game",
+{
+p_game_id:id,
+p_manifest:manifest()
+}
+);
+
+if(error){
+toast(
+friendly(error.message)
+);
+return;
+}
+
+toast("Game published.");
+
+go("play");
+
+}else{
+
+toast(
+"Draft saved to Supabase."
+);
+
+}
+
+}
+
+function testGame(){
+
+openGeneric(`
+<div class="head">
+
+<div>
+<h2>▶ Test Mode</h2>
+<p>
+Your current editor manifest is being tested.
+</p>
+</div>
+
+<button
+class="btn"
+onclick="closeGeneric()">
+Exit Test
+</button>
+
+</div>
+
+<div class="notice ok">
+Test mode is local to this editor session.
+Publishing writes the game version to Supabase.
+</div>
+
+<div
+class="canvas"
+id="testCanvas"
+style="margin-top:12px">
+</div>
+`);
+
+setTimeout(()=>{
+$("testCanvas").innerHTML=
+$("canvas").innerHTML;
+},0);
+
+}function renderProfile(){
+
+const box=$("profileBox");
+
+if(!logged()){
+
+box.innerHTML=`
+<div class="card">
+
+<h3>Guest</h3>
+
+<p>
+Log in to view your creator profile
+and subscription.
+</p>
+
+<button
+class="btn primary"
+onclick="openAuth()">
+Log in / Join
+</button>
+
+</div>
+`;
+
+return;
+
+}
+
+const e=S.ent||{};
+
+const storage=
+(
+(e.storage_limit_bytes||
+10737418240)
+/
+1073741824
+).toFixed(0);
+
+box.innerHTML=`
+
+<div class="grid two">
+
+<div class="card">
+
+<div class="kicker">
+Creator
+</div>
+
+<h2>
+${esc(
+S.profile?.display_name||
+S.profile?.username||
+"Creator"
+)}
+</h2>
+
+<p>
+@${esc(
+S.profile?.username||""
+)}
+</p>
+
+<p>
+Age category:
+<b>
+${esc(
+S.profile?.age_category||""
+)}
+</b>
+</p>
+
+<p>
+Followers:
+${S.profile?.followers_count||0}
+·
+Rating:
+${S.profile?.creator_rating||0}/5
+</p>
+
+</div>
+
+<div class="card">
+
+<div class="kicker">
+Plan
+</div>
+
+<h2>
+${esc(planName())}
+</h2>
+
+<p>
+Status:
+${esc(e.status||"active")}
+</p>
+
+<p>
+Workspace:
+${storage} GB
+</p>
+
+<p>
+Expires:
+${esc(
+e.ends_at
+?new Date(e.ends_at).toLocaleString()
+:"—"
+)}
+</p>
+
+<button
+class="btn primary"
+onclick="openPlans()">
+↑ Upgrade / Renew
+</button>
+
+</div>
+
+</div>
+
+<div class="card section">
+
+<div class="kicker">
+METPAY
+</div>
+
+<h3>
+METXON economy checkout
+</h3>
+
+<p>
+MetGames creates the secure pending payment
+record in Supabase, then hands the user to
+the external METPAY checkout.
+MetGames never asks for or stores the
+METACCOUNT password.
+</p>
+
+<button
+class="btn primary"
+onclick="openPlans()">
+Open plans
+</button>
+
+</div>
+
+`;
+
+}
+
+function openPlans(){
+
+const ps=
+S.plans.length
+?S.plans
+:[
+{
+id:"free",
+name:"Free Creator",
+price_jp_week:0,
+storage_limit_bytes:10737418240
+},
+{
+id:"base",
+name:"Base",
+price_jp_week:500,
+storage_limit_bytes:32212254720
+},
+{
+id:"silver",
+name:"Silver",
+price_jp_week:2000,
+storage_limit_bytes:53687091200
+},
+{
+id:"gold",
+name:"Gold",
+price_jp_week:5000,
+storage_limit_bytes:80530636800
+}
+];
+
+openGeneric(`
+
+<div class="head">
+
+<div>
+
+<h2>
+Creator plans
+</h2>
+
+<p>
+Weekly prices use Jurassic Points (JP).
+</p>
+
+</div>
+
+<button
+class="btn"
+onclick="closeGeneric()">
+Close
+</button>
+
+</div>
+
+<div class="plans">
+
+${ps.map(p=>`
+
+<div class="plan">
+
+<h3>
+${esc(p.name)}
+</h3>
+
+<div class="price">
+${p.price_jp_week||0}
+JP/week
+</div>
+
+<ul>
+
+<li>
+${(
+(p.storage_limit_bytes||0)
+/
+1073741824
+).toFixed(0)}
+GB workspace
+</li>
+
+<li>
+${
+p.id==="free"
+?"5 games/week"
+:"Unlimited creation"
+}
+</li>
+
+<li>
+${
+p.id==="silver"||
+p.id==="gold"
+?"Trailer creation"
+:"Trailer locked"
+}
+</li>
+
+<li>
+${
+p.id==="gold"
+?"Create targeted ads"
+:"Ads locked"
+}
+</li>
+
+</ul>
+
+<button
+class="btn ${
+p.id===plan()
+?""
+:"primary"
+}"
+${p.id===plan()?"disabled":""}
+onclick="payPlan('${p.id}')">
+
+${
+p.id===plan()
+?"Current"
+:"Continue with METPAY"
+}
+
+</button>
+
+</div>
+
+`).join("")}
+
+</div>
+
+`);
+
+}
+
+async function payPlan(id){
+
+if(id==="free")
+return;
+
+const currency=
+prompt(
+"Payment display currency (INR, USD, GBP, EUR or AED):",
+"INR"
+);
+
+if(!currency)
+return;
+
+try{
+
+const {
+data,
+error
+}=await db.functions.invoke(
+"metgames-payment",
+{
+body:{
+action:"start",
+planId:id,
+currency:currency.toUpperCase(),
+username:S.profile?.username
+}
+}
+);
+
+if(error||data?.error){
+
+toast(
+data?.error||
+friendly(error?.message)
+);
+
+return;
+}
+
+if(data.checkout_url){
+
+window.open(
+data.checkout_url,
+"_blank",
+"noopener"
+);
+
+}else{
+
+toast(
+"METPAY checkout was not returned."
+);
+
+}
+
+}catch(e){
+
+toast(
+"METPAY checkout could not be started."
+);
+
+}
+
+}
+
+async function mexAI(){
+
+if(!requireLogin())
+return;
+
+const promptText=
+prompt(
+"What should MEX AI help you build?"
+);
+
+if(!promptText)
+return;
+
+$("mexReply").innerHTML=
+'<div class="notice">MEX AI is thinking…</div>';
+
+const {
+data,
+error
+}=await db.functions.invoke(
+"mex-ai",
+{
+body:{
+message:promptText,
+context:{
+mode:"advanced_studio"
+}
+}
+}
+);
+
+if(error||data?.error){
+
+msg(
+$("mexReply"),
+data?.error||
+"MEX AI is not configured yet. The API key must be stored in the Edge Function secrets.",
+"warn"
+);
+
+return;
+}
+
+$("mexReply").innerHTML=
+'<div class="notice ok">'+
+esc(data.reply||"No response.")+
+"</div>";
+
+}
+
+$("mexAsk").onclick=mexAI;
+
+function openGeneric(h){
+
+$("genericBody").innerHTML=h;
+
+$("genericModal")
+.classList.add("show");
+
+}
+
+function closeGeneric(){
+
+$("genericModal")
+.classList.remove("show");
+
+}
+
+$("genericModal").onclick=e=>{
+
+if(e.target.id==="genericModal")
+closeGeneric();
+
+};
+
+$("refreshGames").onclick=
+loadGames;
+
+$("refreshTrailers").onclick=
+loadTrailers;
+
+let last=performance.now();
+let frames=0;
+
+function fps(t){
+
+frames++;
+
+if(t-last>1000){
+
+$("fps").textContent=
+Math.round(
+frames*1000/(t-last)
+)+
+" FPS";
+
+frames=0;
+last=t;
+
+}
+
+requestAnimationFrame(fps);
+
+}
+
+requestAnimationFrame(fps);
+
+(async()=>{
+
+await userState();
+
+updateHeader();
+
+renderProfile();
+
+})();
+
+</script><script>
+/* =========================================================
+   PART 4 — METGAMES MEDIA, CREATOR BUTTONS & ADS
+   ========================================================= */
+
+async function upload(file,folder){
+  if(!file) throw Error("No file selected.");
+
+  if(!S.user)
+    throw Error("Please log in first.");
+
+  const safeName=file.name
+    .replace(/[^a-zA-Z0-9._-]/g,"_");
+
+  const path=
+    `${S.user.id}/${folder}/${Date.now()}-${safeName}`;
+
+  /*
+    MetGames keeps creator media in Supabase storage.
+    The bucket can be changed here if the project uses
+    another configured bucket.
+  */
+  const {data,error}=
+    await db.storage
+      .from(PUBLIC_BUCKET)
+      .upload(path,file,{
+        upsert:false,
+        contentType:file.type||"application/octet-stream"
+      });
+
+  if(error)
+    throw Error(
+      error.message||
+      "File upload failed."
     );
 
-    btn.disabled=false;
-    return;
-  }
+  const {data:urlData}=db.storage
+    .from(PUBLIC_BUCKET)
+    .getPublicUrl(data.path);
 
-  if(data?.session){
+  return{
+    path:data.path,
+    url:urlData.publicUrl
+  };
+}
 
-    await db.auth.setSession(data.session);
 
-    await userState();
+/* -----------------------------
+   CREATE PAGE BUTTONS
+----------------------------- */
 
-    updateHeader();
+$("freeCreatorBtn").onclick=()=>{
+  if(!requireLogin()) return;
 
-    $("authModal")
-      .classList
-      .remove("show");
-
-    toast("Signed in.");
-
-    render();
-  }
-
-  btn.disabled=false;
+  go("creator");
 };
 
 
-/* =========================================================
-   FRIENDLY ERRORS
-========================================================= */
+$("advancedBtn").onclick=()=>{
+  if(!requireLogin()) return;
 
-function friendly(e){
+  const p=plan();
 
-  const s=String(
-    e||"Something went wrong."
-  );
-
-  const map={
-
-    WEEKLY_GAME_LIMIT:
-      "Free Creator has reached its 5-games-this-week limit.",
-
-    TRAILER_SUBSCRIPTION_REQUIRED:
-      "Silver or Gold is required to create trailers.",
-
-    ADS_GOLD_REQUIRED:
-      "Gold is required to create ads.",
-
-    DAILY_PLAY_LIMIT:
-      "Your daily play limit for this game type has been reached.",
-
-    LOGIN_REQUIRED:
-      "Please log in first.",
-
-    NOT_OWNER:
-      "This item does not belong to your account.",
-
-    CREATOR_ENTITLEMENT_MISSING:
-      "Your creator account is still being set up. Please refresh and try again.",
-
-    INVALID_RECOVERY_PASSWORD:
-      "Recovery password must be 8–128 characters."
-  };
-
-  for(const k in map)
-    if(s.includes(k))
-      return map[k];
-
-  return s
-    .replace(/^.*?:\s*/,"")
-    .slice(0,220);
-}
-
-
-/* =========================================================
-   PLAY
-========================================================= */
-
-async function loadGames(){
-
-  const box=$("games");
-
-  box.innerHTML=
-    '<div class="card"><p>Loading games…</p></div>';
-
-  const {
-    data,
-    error
-  }=await db
-    .from("games")
-    .select(`
-      id,
-      title,
-      description,
-      game_type,
-      maturity_rating,
-      creator_name_snapshot,
-      creator_age_category_snapshot,
-      published_at
-    `)
-    .eq("status","published")
-    .order("published_at",{ascending:false});
-
-  if(error){
-
-    msg(
-      box,
-      "Games are temporarily unavailable.",
-      "err"
+  if(
+    p!=="base" &&
+    p!=="silver" &&
+    p!=="gold"
+  ){
+    toast(
+      "Advanced Studio requires a paid creator plan."
     );
-
     return;
   }
 
-  if(!data?.length){
-
-    box.innerHTML=`
-      <div class="card">
-        <h3>No published games yet</h3>
-        <p>Create the first MetGames game.</p>
-        <button
-          class="btn primary"
-          onclick="go('create')">
-          Create a game
-        </button>
-      </div>
-    `;
-
-    return;
-  }
-
-  box.innerHTML=data.map(g=>`
-
-    <article class="card">
-
-      <div class="kicker">
-        ${esc(g.game_type)}
-        ·
-        ${esc(g.maturity_rating)}
-      </div>
-
-      <h3>${esc(g.title)}</h3>
-
-      <p>
-        ${esc(
-          g.description||
-          "No description."
-        )}
-      </p>
-
-      <span class="tag">
-        ${esc(
-          g.creator_name_snapshot||
-          "Creator"
-        )}
-      </span>
-
-      <span class="tag">
-        ${esc(
-          g.creator_age_category_snapshot||
-          ""
-        )}
-      </span>
-
-      <br>
-
-      <button
-        class="btn primary"
-        style="margin-top:12px"
-        onclick="playGame('${g.id}')">
-        ▶ Play
-      </button>
-
-    </article>
-
-  `).join("");
-}
+  go("advanced");
+};
 
 
-async function playGame(id){
+/* -----------------------------
+   CREATE ADS
+----------------------------- */
 
-  if(!requireLogin())
-    return;
-
-  const {
-    data,
-    error
-  }=await db.rpc(
-    "increment_game_launch",
-    {p_game_id:id}
-  );
-
-  if(error){
-
-    toast(friendly(error.message));
-
-    return;
-  }
-
-  const {
-    data:g
-  }=await db
-    .from("games")
-    .select("title,description")
-    .eq("id",id)
-    .maybeSingle();
-
-  if(!g)
-    return;
-
-  openGeneric(`
-
-    <div class="head">
-
-      <div>
-        <h2>${esc(g.title)}</h2>
-        <p>${esc(g.description||"")}</p>
-      </div>
-
-      <button
-        class="btn"
-        onclick="closeGeneric()">
-        Close
-      </button>
-
-    </div>
-
-    <div class="notice ok">
-      Play session started and the launch
-      was recorded in Supabase.
-    </div>
-
-  `);
-}
-
-
-/* =========================================================
-   CREATE SECTION
-========================================================= */
-
-function renderCreate(){
-
-  const adv=[
-    "base",
-    "silver",
-    "gold"
-  ].includes(plan());
-
-  $("advancedCard")
-    .classList
-    .toggle("locked",!adv);
-
-  $("advancedStatus").textContent=
-    adv
-      ?"Advanced Studio unlocked."
-      :"Locked — Base, Silver or Gold required.";
-
-  $("advancedOpen").disabled=!adv;
-
-  $("advancedOpen").onclick=()=>{
-    if(adv)
-      go("advanced");
-  };
-
-  renderAdGate();
-
-  renderAdCreator();
-}
-
-
-function renderAdGate(){
-
-  const ok=plan()==="gold";
-
-  $("adGate").className=
-    "notice "+
-    (ok?"ok":"warn");
-
-  $("adGate").textContent=
-
-    ok
-
-      ?"Gold ad creation is unlocked. Ads target game category + game type + platform."
-
-      :"Create Ads is locked. Free, Base and Silver can see the option, but only Gold can use it.";
-}
-
-
-/* =========================================================
-   ADS
-========================================================= */
-
-function renderAdCreator(){
-
-  if(!logged()){
-
-    $("adCreator").innerHTML=`
-      <button
-        class="btn primary"
-        onclick="openAuth()">
-        Log in to create an ad
-      </button>
-    `;
-
-    return;
-  }
+$("adsBtn").onclick=()=>{
+  if(!requireLogin()) return;
 
   if(plan()!=="gold"){
-
-    $("adCreator").innerHTML=`
-      <button
-        class="btn"
-        disabled>
-        🔒 Create Ads
-      </button>
-    `;
-
+    toast(
+      "Create Ads is available to Gold creators."
+    );
     return;
   }
 
-  $("adCreator").innerHTML=`
+  openGeneric(adForm());
+};
+
+
+function adForm(){
+
+return `
+<div class="head">
+
+  <div>
+    <div class="kicker">GOLD CREATOR</div>
+    <h2>Create Advertisement</h2>
+    <p>
+      Upload a video or image ad and optionally add
+      a separate audio track.
+    </p>
+  </div>
+
+  <button
+    class="btn"
+    onclick="closeGeneric()">
+    Close
+  </button>
+
+</div>
+
+<div class="form">
+
+  <div class="field">
+    <label>Creator name</label>
+    <input
+      id="adCreator"
+      value="${esc(
+        S.profile?.display_name||
+        S.profile?.username||
+        ""
+      )}">
+  </div>
+
+  <div class="row">
+
+    <div class="field">
+      <label>Game category</label>
+      <input
+        id="adCategory"
+        placeholder="Adventure">
+    </div>
+
+    <div class="field">
+      <label>Game type</label>
+      <input
+        id="adType"
+        placeholder="3D">
+    </div>
+
+  </div>
+
+  <div class="row">
+
+    <div class="field">
+      <label>Platform</label>
+      <input
+        id="adPlatform"
+        placeholder="Android">
+    </div>
+
+    <div class="field">
+      <label>Age rating</label>
+      <input
+        id="adAge"
+        placeholder="13–15">
+    </div>
+
+  </div>
+
+  <div class="field">
+    <label>Where to play</label>
+    <input
+      id="adWhere"
+      value="Game category + game type + platform"
+      readonly>
+  </div>
+
+  <div class="field">
+    <label>When to play</label>
+    <input
+      id="adWhen"
+      value="Minimum interval: 3 minutes">
+  </div>
+
+  <div class="field">
+    <label>Ad video (maximum 1 minute)</label>
+    <input
+      id="adVideo"
+      type="file"
+      accept="video/*">
+  </div>
+
+  <div class="field">
+    <label>Ad image (optional)</label>
+    <input
+      id="adImage"
+      type="file"
+      accept="image/*">
+  </div>
+
+  <div class="field">
+    <label>Separate audio (optional)</label>
+    <input
+      id="adAudio"
+      type="file"
+      accept="audio/*">
+  </div>
+
+  <div class="notice">
+    Ads target a category, game type and platform.
+    They are not attached to one specific game.
+    The minimum playback interval is 3 minutes.
+  </div>
+
+  <button
+    class="btn primary"
+    onclick="createAdNow()">
+    Import Advertisement
+  </button>
+
+</div>
+`;
 
-    <form id="adForm" class="card form">
-
-      <div class="row">
-
-        <div class="field">
-
-          <label>Media</label>
-
-          <select id="adMode">
-
-            <option value="video">
-              Video
-            </option>
-
-            <option value="slideshow">
-              Image slideshow
-            </option>
-
-          </select>
-
-        </div>
-
-        <div class="field">
-
-          <label>
-            Separate audio track
-          </label>
-
-          <input
-            id="adAudio"
-            type="file"
-            accept="audio/*"
-            required>
-
-        </div>
-
-      </div>
-
-
-      <div
-        id="adVideoRow"
-        class="field">
-
-        <label>
-          Video — maximum 60 seconds
-        </label>
-
-        <input
-          id="adVideo"
-          type="file"
-          accept="video/*">
-
-      </div>
-
-
-      <div
-        id="adImagesRow"
-        class="field hidden">
-
-        <label>Images</label>
-
-        <input
-          id="adImages"
-          type="file"
-          accept="image/*"
-          multiple>
-
-      </div>
-
-
-      <div class="row">
-
-        <div class="field">
-
-          <label>Game category</label>
-
-          <input
-            id="adCat"
-            placeholder="Adventure, Racing, Puzzle...">
-
-        </div>
-
-        <div class="field">
-
-          <label>Game type</label>
-
-          <select id="adType">
-
-            <option>any</option>
-            <option>2d</option>
-            <option>3d</option>
-
-          </select>
-
-        </div>
-
-      </div>
-
-
-      <div class="row">
-
-        <div class="field">
-
-          <label>Platform</label>
-
-          <input
-            id="adPlatform"
-            placeholder="Android, Web, iOS...">
-
-        </div>
-
-        <div class="field">
-
-          <label>Age rating</label>
-
-          <select id="adAge">
-
-            <option>all</option>
-            <option>7+</option>
-            <option>12+</option>
-            <option>13+</option>
-            <option>16+</option>
-            <option>18+</option>
-
-          </select>
-
-        </div>
-
-      </div>
-
-
-      <div class="field">
-
-        <label>Creator name</label>
-
-        <input
-          id="adCreatorName"
-          value="${esc(
-            S.profile?.display_name||
-            S.profile?.username||
-            ""
-          )}">
-
-      </div>
-
-
-      <button class="btn primary">
-        Import Ad
-      </button>
-
-      <div id="adMsg"></div>
-
-    </form>
-  `;
-
-
-  $("adMode").onchange=()=>{
-
-    const s=
-      $("adMode").value==="slideshow";
-
-    $("adVideoRow")
-      .classList
-      .toggle("hidden",s);
-
-    $("adImagesRow")
-      .classList
-      .toggle("hidden",!s);
-  };
-
-
-  $("adForm").onsubmit=submitAd;
 }
 
 
-async function submitAd(e){
+async function createAdNow(){
 
-  e.preventDefault();
+try{
 
-  try{
+  const video=$("adVideo").files[0];
+  const image=$("adImage").files[0];
+  const audio=$("adAudio").files[0];
 
-    const mode=$("adMode").value;
+  if(!video && !image)
+    throw Error(
+      "Choose an ad video or image."
+    );
 
-    const audio=
-      $("adAudio").files[0];
+  let videoUrl=null;
+  let imageUrl=null;
+  let audioUrl=null;
 
-    if(!audio)
+  if(video){
+
+    const d=
+      await duration(video);
+
+    if(d>60)
       throw Error(
-        "Separate audio is required."
+        "Advertisement video must be 1 minute or less."
       );
 
-    const au=
+    const u=
+      await upload(
+        video,
+        "ads/video"
+      );
+
+    videoUrl=u.url;
+  }
+
+  if(image){
+
+    const u=
+      await upload(
+        image,
+        "ads/images"
+      );
+
+    imageUrl=u.url;
+  }
+
+  if(audio){
+
+    const u=
       await upload(
         audio,
         "ads/audio"
       );
 
-    let videoPath=null;
+    audioUrl=u.url;
+  }
 
-    let images=[];
+  const payload={
+    creator_name:
+      $("adCreator").value,
 
-    let duration=
-      await durationOf(audio);
+    category:
+      $("adCategory").value,
 
+    game_category:
+      $("adCategory").value,
 
-    if(mode==="video"){
+    game_type:
+      $("adType").value,
 
-      const f=
-        $("adVideo").files[0];
+    platform:
+      $("adPlatform").value,
 
-      if(!f)
-        throw Error(
-          "Choose a video."
-        );
+    age_rating:
+      $("adAge").value,
 
-      duration=
-        await durationOf(f);
+    where_to_play:
+      $("adWhere").value,
 
-      if(duration>60)
-        throw Error(
-          "Ad must be 60 seconds or less."
-        );
+    when_to_play:
+      $("adWhen").value,
 
-      videoPath=
-        (
-          await upload(
-            f,
-            "ads/video"
-          )
-        ).path;
+    interval_seconds:180,
 
-    }else{
+    video_url:videoUrl,
 
-      const fs=[
-        ...$("adImages").files
-      ];
+    image_url:imageUrl,
 
-      if(!fs.length)
-        throw Error(
-          "Choose at least one image."
-        );
+    audio_path:audioUrl
+  };
 
-      for(const f of fs){
-
-        const u=
-          await upload(
-            f,
-            "ads/images"
-          );
-
-        images.push({
-          path:u.path,
-          name:f.name
-        });
-      }
-
-      if(duration>60)
-        throw Error(
-          "Audio must be 60 seconds or less."
-        );
-    }
-
-
-    const {
-      data,
-      error
-    }=await db.functions.invoke(
+  const {
+    data,
+    error
+  }=
+    await db.functions.invoke(
       "metgames-media",
       {
         body:{
           action:"create_ad",
-          mediaMode:mode,
-          videoPath,
-          audioPath:au.path,
-          imageManifest:images,
-          durationSeconds:
-            Math.max(
-              1,
-              Math.ceil(duration)
-            ),
-          gameCategory:
-            $("adCat").value,
-          gameType:
-            $("adType").value,
-          platform:
-            $("adPlatform").value,
-          ageRating:
-            $("adAge").value,
-          creatorName:
-            $("adCreatorName").value
+          payload
         }
       }
     );
 
+  if(error||data?.error)
+    throw Error(
+      data?.error||
+      error?.message||
+      "Advertisement could not be created."
+    );
 
-    if(error||data?.error)
-      throw Error(
-        friendly(
-          data?.error||
-          error?.message
-        )
-      );
+  if(data?.ad_id){
 
-
-    const ad=data.data;
-
-
-    const pub=
+    const result=
       await db.functions.invoke(
         "metgames-media",
         {
           body:{
             action:"publish_ad",
-            adId:ad.id
+            ad_id:data.ad_id
           }
         }
       );
 
-
-    if(
-      pub.error||
-      pub.data?.error
-    ){
+    if(result.error||result.data?.error){
 
       throw Error(
-        friendly(
-          pub.data?.error||
-          pub.error?.message
-        )
+        result.data?.error||
+        result.error?.message||
+        "Advertisement was created but could not be published."
       );
+
     }
 
-
-    toast(
-      "Ad published. Playback policy: minimum one ad every 3 minutes."
-    );
-
-    e.target.reset();
-
-  }catch(err){
-
-    toast(
-      err.message||
-      "Ad creation failed."
-    );
   }
+
+  closeGeneric();
+
+  toast(
+    "Advertisement imported and published."
+  );
+
+}catch(e){
+
+  toast(
+    friendly(e.message)
+  );
+
+}
+
 }
 
 
-/* =========================================================
-   TRAILERS
-========================================================= */
-
-function renderTrailerGate(){
-
-  const ok=[
-    "silver",
-    "gold"
-  ].includes(plan());
-
-  $("trailerGate").className=
-    "notice "+
-    (ok?"ok":"warn");
-
-  $("trailerGate").textContent=
-
-    ok
-
-      ?"Trailer creation is unlocked for Silver/Gold."
-
-      :"Trailer creation is locked. Silver or Gold is required.";
-}
-
-
-async function loadTrailers(){
-
-  renderTrailerGate();
-
-  renderTrailerCreator();
-
-  const box=$("trailerList");
-
-  box.innerHTML=
-    '<div class="card"><p>Loading trailers…</p></div>';
-
-
-  const {
-    data,
-    error
-  }=await db
-    .from("trailers")
-    .select(`
-      id,
-      media_mode,
-      storage_path,
-      audio_path,
-      image_manifest,
-      duration_seconds,
-      trailer_title,
-      release_text,
-      where_to_play,
-      short_description,
-      age_rating,
-      game_type,
-      creator_name,
-      platform,
-      game_id
-    `)
-    .eq("status","published")
-    .order(
-      "created_at",
-      {ascending:false}
-    );
-
-
-  if(error){
-
-    msg(
-      box,
-      "Trailers are temporarily unavailable.",
-      "err"
-    );
-
-    return;
-  }
-
-
-  if(!data?.length){
-
-    box.innerHTML=`
-      <div class="card">
-
-        <h3>
-          No public trailers yet
-        </h3>
-
-        <p>
-          Eligible creators can publish
-          the first trailer.
-        </p>
-
-      </div>
-    `;
-
-    return;
-  }
-
-
-  box.innerHTML=data.map(t=>`
-
-    <article class="card">
-
-      <div class="kicker">
-
-        ${esc(t.media_mode)}
-        ·
-        ${esc(t.duration_seconds)}s
-
-      </div>
-
-      <h3>
-        ${esc(
-          t.trailer_title||
-          "Game trailer"
-        )}
-      </h3>
-
-      <p>
-        ${esc(
-          t.short_description||
-          ""
-        )}
-      </p>
-
-      <span class="tag">
-        ${esc(t.age_rating||"")}
-      </span>
-
-      <span class="tag">
-        ${esc(t.game_type||"")}
-      </span>
-
-      <span class="tag">
-        ${esc(t.platform||"")}
-      </span>
-
-      ${
-        t.media_mode==="video"&&
-        t.storage_path
-
-        ?
-
-        `<video
-          class="media"
-          controls
-          src="${pubUrl(
-            t.storage_path
-          )}">
-        </video>`
-
-        :""
-      }
-
-      ${
-        t.audio_path
-
-        ?
-
-        `<audio
-          controls
-          style="
-            width:100%;
-            margin-top:8px
-          "
-          src="${pubUrl(
-            t.audio_path
-          )}">
-        </audio>`
-
-        :""
-      }
-
-      ${
-        t.media_mode==="slideshow"&&
-        Array.isArray(
-          t.image_manifest
-        )
-
-        ?
-
-        `<div
-          class="thumbs"
-          style="margin-top:9px">
-
-          ${
-            t.image_manifest.map(x=>`
-
-              <img
-                src="${pubUrl(x.path)}">
-
-            `).join("")
-          }
-
-        </div>`
-
-        :""
-      }
-
-    </article>
-
-  `).join("");
-}
-
-
-function renderTrailerCreator(){
-
-  if(!logged()){
-
-    $("trailerCreator").innerHTML=`
-
-      <button
-        class="btn primary"
-        onclick="openAuth()">
-
-        Log in to create a trailer
-
-      </button>
-
-    `;
-
-    return;
-  }
-
-
-  if(![
-    "silver",
-    "gold"
-  ].includes(plan())){
-
-    $("trailerCreator").innerHTML=`
-
-      <button
-        class="btn"
-        disabled>
-
-        🔒 Create Trailer
-
-      </button>
-
-    `;
-
-    return;
-  }
-
-
-  $("trailerCreator").innerHTML=`
-
-    <form
-      id="trForm"
-      class="card form">
-
-
-      <div class="row">
-
-        <div class="field">
-
-          <label>Game</label>
-
-          <select id="trGame"></select>
-
-        </div>
-
-
-        <div class="field">
-
-          <label>
-            Trailer title
-          </label>
-
-          <input
-            id="trTitle"
-            required>
-
-        </div>
-
-      </div>
-
-
-      <div class="row">
-
-        <div class="field">
-
-          <label>Media</label>
-
-          <select id="trMode">
-
-            <option value="video">
-              Video
-            </option>
-
-            <option value="slideshow">
-              Image slideshow
-            </option>
-
-          </select>
-
-        </div>
-
-
-        <div class="field">
-
-          <label>
-            Separate audio
-          </label>
-
-          <input
-            id="trAudio"
-            type="file"
-            accept="audio/*"
-            required>
-
-        </div>
-
-      </div>
-
-
-      <div
-        id="trVideoRow"
-        class="field">
-
-        <label>
-          Video — maximum 60 seconds
-        </label>
-
-        <input
-          id="trVideo"
-          type="file"
-          accept="video/*">
-
-      </div>
-
-
-      <div
-        id="trImagesRow"
-        class="field hidden">
-
-        <label>Images</label>
-
-        <input
-          id="trImages"
-          type="file"
-          accept="image/*"
-          multiple>
-
-      </div>
-
-
-      <div class="row">
-
-        <div class="field">
-
-          <label>
-            Release / when to play
-          </label>
-
-          <input id="trRelease">
-
-        </div>
-
-
-        <div class="field">
-
-          <label>
-            Where to play
-          </label>
-
-          <input id="trWhere">
-
-        </div>
-
-      </div>
-
-
-      <div class="row">
-
-        <div class="field">
-
-          <label>
-            Age rating
-          </label>
-
-          <select id="trAge">
-
-            <option>all</option>
-            <option>7+</option>
-            <option>12+</option>
-            <option>13+</option>
-            <option>16+</option>
-            <option>18+</option>
-
-          </select>
-
-        </div>
-
-
-        <div class="field">
-
-          <label>
-            Platform
-          </label>
-
-          <input
-            id="trPlatform"
-            placeholder="
-              Web / Android / iOS / PC
-            ">
-
-        </div>
-
-      </div>
-
-
-      <div class="field">
-
-        <label>
-          Short description
-        </label>
-
-        <textarea id="trDesc"></textarea>
-
-      </div>
-
-
-      <button class="btn primary">
-        Import Trailer
-      </button>
-
-    </form>
-
-  `;
-
-
-  db.from("games")
-    .select(
-      "id,title,game_type,maturity_rating"
-    )
-    .eq(
-      "owner_id",
-      S.user.id
-    )
-    .order(
-      "created_at",
-      {ascending:false}
-    )
-    .then(({data})=>{
-
-      $("trGame").innerHTML=
-        (data||[])
-        .map(g=>`
-
-          <option
-            value="${g.id}"
-            data-type="${g.game_type}">
-
-            ${esc(g.title)}
-
-          </option>
-
-        `)
-        .join("")
-
-        ||
-
-        `<option value="">
-          Create a game first
-        </option>`;
-
+/* -----------------------------
+   LOGOUT
+----------------------------- */
+
+function logout(){
+
+  db.auth.signOut()
+    .then(()=>{
+      S.user=null;
+      S.profile=null;
+      S.ent=null;
+
+      updateHeader();
+      renderProfile();
+      go("home");
+
+      toast("Logged out.");
+    })
+    .catch(()=>{
+      toast("Could not log out.");
     });
 
-
-  $("trMode").onchange=()=>{
-
-    const s=
-      $("trMode").value==="slideshow";
-
-    $("trVideoRow")
-      .classList
-      .toggle("hidden",s);
-
-    $("trImagesRow")
-      .classList
-      .toggle("hidden",!s);
-  };
-
-
-  $("trForm").onsubmit=
-    submitTrailer;
 }
 
 
-async function submitTrailer(e){
+/* -----------------------------
+   PROFILE LOGOUT BUTTON
+----------------------------- */
 
-  e.preventDefault();
+const oldRenderProfile=
+  renderProfile;
 
-  try{
+renderProfile=function(){
 
-    const mode=
-      $("trMode").value;
+  oldRenderProfile();
 
-    const gameId=
-      $("trGame").value;
-
-    if(!gameId)
-      throw Error(
-        "Create a game first."
-      );
-
-
-    const audio=
-      $("trAudio").files[0];
-
-    if(!audio)
-      throw Error(
-        "Separate audio is required."
-      );
-
-
-    const au=
-      await upload(
-        audio,
-        "trailers/audio"
-      );
-
-
-    let videoPath=null;
-
-    let images=[];
-
-    let duration;
-
-
-    if(mode==="video"){
-
-      const f=
-        $("trVideo").files[0];
-
-      if(!f)
-        throw Error(
-          "Choose a video."
-        );
-
-
-      duration=
-        await durationOf(f);
-
-
-      if(duration>60)
-        throw Error(
-          "Trailer must be 60 seconds or less."
-        );
-
-
-      videoPath=
-        (
-          await upload(
-            f,
-            "trailers/video"
-          )
-        ).path;
-
-    }else{
-
-      const fs=[
-        ...$("trImages").files
-      ];
-
-      if(!fs.length)
-        throw Error(
-          "Choose at least one image."
-        );
-
-
-      for(const f of fs){
-
-        const u=
-          await upload(
-            f,
-            "trailers/images"
-          );
-
-        images.push({
-          path:u.path,
-          name:f.name
-        });
-
-      }
-
-
-      duration=
-        await durationOf(audio);
-
-
-      if(duration>60)
-        throw Error(
-          "Audio must be 60 seconds or less."
-        );
-
-      videoPath=
-        images[0].path;
-    }
-
-
-    const opt=
-      $("trGame")
-      .selectedOptions[0];
-
-
-    const {
-      data,
-      error
-    }=await db.functions.invoke(
-      "metgames-media",
-      {
-        body:{
-
-          action:"create_trailer",
-
-          gameId,
-
-          mediaMode:mode,
-
-          storagePath:videoPath,
-
-          audioPath:au.path,
-
-          imageManifest:images,
-
-          durationSeconds:
-            Math.max(
-              1,
-              Math.ceil(duration)
-            ),
-
-          trailerTitle:
-            $("trTitle").value,
-
-          releaseText:
-            $("trRelease").value,
-
-          whereToPlay:
-            $("trWhere").value,
-
-          shortDescription:
-            $("trDesc").value,
-
-          ageRating:
-            $("trAge").value,
-
-          gameType:
-            opt?.dataset.type||
-            "2d",
-
-          creatorName:
-            S.profile?.display_name||
-            S.profile?.username||
-            "Creator",
-
-          platform:
-            $("trPlatform").value
-        }
-      }
-    );
-
-
-    if(error||data?.error)
-      throw Error(
-        friendly(
-          data?.error||
-          error?.message
-        )
-      );
-
-
-    const tr=data.data;
-
-
-    const pub=
-      await db.functions.invoke(
-        "metgames-media",
-        {
-          body:{
-            action:"publish_trailer",
-            trailerId:tr.id
-          }
-        }
-      );
-
-
-    if(
-      pub.error||
-      pub.data?.error
-    ){
-
-      throw Error(
-        friendly(
-          pub.data?.error||
-          pub.error?.message
-        )
-      );
-    }
-
-
-    toast(
-      "Trailer published."
-    );
-
-    e.target.reset();
-
-    loadTrailers();
-
-
-  }catch(err){
-
-    toast(
-      err.message||
-      "Trailer creation failed."
-    );
-  }
-}
-
-
-/* =========================================================
-   STORAGE
-========================================================= */
-
-async function upload(file,folder){
-
-  if(!requireLogin())
-    throw Error(
-      "Please log in first."
-    );
-
-
-  const name=
-    file.name.replace(
-      /[^a-zA-Z0-9._-]/g,
-      "_"
-    );
-
-
-  const path=
-    `${folder}/${S.user.id}/${crypto.randomUUID()}-${name}`;
-
-
-  const {
-    error
-  }=await db.storage
-    .from(PUBLIC_BUCKET)
-    .upload(
-      path,
-      file,
-      {
-        upsert:false,
-        contentType:file.type
-      }
-    );
-
-
-  if(error)
-    throw Error(
-      "Upload failed. Please try again."
-    );
-
-
-  return {
-    path,
-    url:pubUrl(path)
-  };
-}
-
-
-function pubUrl(path){
-
-  return db.storage
-    .from(PUBLIC_BUCKET)
-    .getPublicUrl(path)
-    .data.publicUrl;
-}
-
-
-function durationOf(file){
-
-  return new Promise(
-    (resolve,reject)=>{
-
-      const u=
-        URL.createObjectURL(file);
-
-      const el=
-        document.createElement(
-          file.type.startsWith("video/")
-            ?"video"
-            :"audio"
-        );
-
-      el.preload="metadata";
-
-      el.onloadedmetadata=()=>{
-
-        URL.revokeObjectURL(u);
-
-        resolve(
-          Number(el.duration)||0
-        );
-      };
-
-      el.onerror=()=>{
-
-        URL.revokeObjectURL(u);
-
-        reject(
-          Error(
-            "Could not read the media duration."
-          )
-        );
-      };
-
-      el.src=u;
-    }
-  );
-}
-
-
-/* =========================================================
-   FREE CREATOR
-========================================================= */
-
-let editorBound=false;
-
-
-function initCreator(){
-
-  if(!editorBound){
-
-    bindEditor();
-
-    editorBound=true;
-  }
-
-  if(!S.game)
-    resetGame();
-}
-
-
-function resetGame(){
-
-  S.game={
-    id:null,
-    title:"Untitled Game",
-    description:"",
-    maturity:"all",
-    recovery:"",
-    background:null
-  };
-
-  S.objects=[];
-
-  S.selected=null;
-
-  draw();
-
-  props();
-}
-
-
-function draw(){
-
-  const c=$("canvas");
-
-  if(!c)
+  if(!logged())
     return;
 
+  const box=$("profileBox");
 
-  c.style.backgroundImage=
-    S.game?.background
-      ?`url("${S.game.background}")`
-      :"";
-
-
-  c.style.backgroundSize="cover";
-
-  c.innerHTML="";
-
-
-  S.objects.forEach(o=>{
-
-    const d=
-      document.createElement("div");
-
-
-    d.className=
-      "obj"+
-      (o.id===S.selected
-        ?" sel"
-        :"");
-
-
-    d.style.left=
-      o.x+"%";
-
-    d.style.top=
-      o.y+"%";
-
-    d.style.width=
-      o.w+"%";
-
-    d.style.height=
-      o.h+"%";
-
-    d.style.transform=
-      `rotate(${o.r}deg)`;
-
-
-    if(o.url){
-
-      const im=
-        document.createElement("img");
-
-      im.src=o.url;
-
-      d.appendChild(im);
-
-    }else{
-
-      d.innerHTML=
-        "<span>"+
-        esc(o.text)+
-        "</span>";
-    }
-
-
-    d.onclick=()=>{
-
-      S.selected=o.id;
-
-      draw();
-
-      props();
-    };
-
-
-    d.oncontextmenu=e=>{
-
-      e.preventDefault();
-
-      S.selected=o.id;
-
-      $("ruleInfo").textContent=
-        `Rules for ${o.text}: WHEN clicked → ADD 10 TO SCORE → DELETE OBJECT`;
-
-      draw();
-
-      props();
-    };
-
-
-    c.appendChild(d);
-  });
-}
-
-
-function props(){
-
-  const p=$("props");
-
-  const o=
-    S.objects.find(
-      x=>x.id===S.selected
-    );
-
-
-  if(!o){
-
-    p.textContent=
-      "Select an object.";
-
-    return;
-  }
-
-
-  p.innerHTML=`
-
-    <div class="form">
-
-      <div class="field">
-
-        <label>Text</label>
-
-        <input
-          id="pxtext"
-          value="${esc(o.text)}">
-
-      </div>
-
-
-      <div class="row">
-
-        <div class="field">
-
-          <label>X %</label>
-
-          <input
-            id="px"
-            type="number"
-            value="${o.x}">
-
-        </div>
-
-
-        <div class="field">
-
-          <label>Y %</label>
-
-          <input
-            id="py"
-            type="number"
-            value="${o.y}">
-
-        </div>
-
-      </div>
-
-
-      <div class="row">
-
-        <div class="field">
-
-          <label>Width %</label>
-
-          <input
-            id="pw"
-            type="number"
-            value="${o.w}">
-
-        </div>
-
-
-        <div class="field">
-
-          <label>Height %</label>
-
-          <input
-            id="ph"
-            type="number"
-            value="${o.h}">
-
-        </div>
-
-      </div>
-
-
-      <div class="field">
-
-        <label>Rotation</label>
-
-        <input
-          id="pr"
-          type="number"
-          value="${o.r}">
-
-      </div>
-
-
-      <button
-        class="btn"
-        id="editRule">
-
-        Edit Rules
-
-      </button>
-
-    </div>
-
-  `;
-
-
-  [
-    "pxtext",
-    "px",
-    "py",
-    "pw",
-    "ph",
-    "pr"
-  ].forEach(id=>{
-
-    $(id).oninput=()=>{
-
-      o.text=
-        $("pxtext").value;
-
-      o.x=
-        +$("px").value;
-
-      o.y=
-        +$("py").value;
-
-      o.w=
-        +$("pw").value;
-
-      o.h=
-        +$("ph").value;
-
-      o.r=
-        +$("pr").value;
-
-      draw();
-    };
-
-  });
-
-
-  $("editRule").onclick=()=>{
-
-    $("ruleInfo").textContent=
-      `Rules for ${o.text}: WHEN clicked → ADD 10 TO SCORE → DELETE OBJECT`;
-  };
-}
-
-
-function bindEditor(){
-
-  $("newGame").onclick=
-    resetGame;
-
-
-  $("bgTool").onclick=()=>
-    $("bgFile").click();
-
-
-  $("objTool").onclick=()=>
-    $("objFile").click();
-
-
-  $("textTool").onclick=()=>{
-
-    const o={
-
-      id:crypto.randomUUID(),
-
-      text:"New Object",
-
-      x:40,
-
-      y:40,
-
-      w:20,
-
-      h:12,
-
-      r:0,
-
-      url:null
-
-    };
-
-
-    S.objects.push(o);
-
-    S.selected=o.id;
-
-    draw();
-
-    props();
-  };
-
-
-  $("dupTool").onclick=()=>{
-
-    const o=
-      S.objects.find(
-        x=>x.id===S.selected
-      );
-
-    if(!o)
-      return;
-
-
-    const n={
-      ...o,
-      id:crypto.randomUUID(),
-      x:Math.min(
-        78,
-        o.x+5
-      ),
-      y:Math.min(
-        78,
-        o.y+5
-      )
-    };
-
-
-    S.objects.push(n);
-
-    S.selected=n.id;
-
-    draw();
-
-    props();
-  };
-
-
-  $("delTool").onclick=()=>{
-
-    S.objects=
-      S.objects.filter(
-        x=>x.id!==S.selected
-      );
-
-    S.selected=null;
-
-    draw();
-
-    props();
-  };
-
-
-  $("bgFile").onchange=
-    async e=>{
-
-      try{
-
-        const file=
-          e.target.files[0];
-
-        if(!file)
-          return;
-
-        const u=
-          await upload(
-            file,
-            "games/backgrounds"
-          );
-
-        S.game.background=
-          u.url;
-
-        draw();
-
-        toast(
-          "Background uploaded."
-        );
-
-      }catch(x){
-
-        toast(x.message);
-      }
-    };
-
-
-  $("objFile").onchange=
-    async e=>{
-
-      try{
-
-        const file=
-          e.target.files[0];
-
-        if(!file)
-          return;
-
-
-        const u=
-          await upload(
-            file,
-            "games/objects"
-          );
-
-
-        const o={
-
-          id:crypto.randomUUID(),
-
-          text:file.name,
-
-          x:10,
-
-          y:10,
-
-          w:22,
-
-          h:22,
-
-          r:0,
-
-          url:u.url,
-
-          path:u.path
-        };
-
-
-        S.objects.push(o);
-
-        S.selected=o.id;
-
-        draw();
-
-        props();
-
-        toast(
-          "Object uploaded."
-        );
-
-      }catch(x){
-
-        toast(x.message);
-      }
-    };
-
-
-  $("saveGame").onclick=
-    ()=>saveGame(false);
-
-
-  $("publishGame").onclick=
-    ()=>saveGame(true);
-
-
-  $("testGame").onclick=
-    testGame;
-}
-
-
-function manifest(){
-
-  return{
-
-    engine:"metgames-2d",
-
-    schema:2,
-
-    background:
-      S.game.background,
-
-    objects:
-      S.objects,
-
-    rules:
-      S.objects.map(o=>({
-
-        objectId:o.id,
-
-        blocks:[
-          "WHEN clicked",
-          "ADD 10 TO SCORE",
-          "DELETE OBJECT"
-        ]
-
-      })),
-
-    timeline:{
-      frames:[
-        {time:0}
-      ]
-    }
-  };
-}
-
-
-/* =========================================================
-   SAVE / PUBLISH GAME
-========================================================= */
-
-async function saveGame(publish){
-
-  if(!requireLogin())
+  if(!box)
     return;
 
+  const logoutButton=
+    document.createElement("button");
 
-  const title=
-    prompt(
-      "Game title:",
-      S.game.title
+  logoutButton.className=
+    "btn";
+
+  logoutButton.textContent=
+    "Log out";
+
+  logoutButton.style.marginTop=
+    "12px";
+
+  logoutButton.onclick=
+    logout;
+
+  const cards=
+    box.querySelectorAll(".card");
+
+  if(cards.length)
+    cards[0].appendChild(
+      logoutButton
     );
 
-  if(title===null)
-    return;
-
-
-  const desc=
-    prompt(
-      "Short description:",
-      S.game.description
-    );
-
-  if(desc===null)
-    return;
-
-
-  const mat=
-    prompt(
-      "Maturity rating: all, 7+, 12+, 13+, 16+, 18+",
-      S.game.maturity
-    );
-
-  if(mat===null)
-    return;
-
-
-  const recovery=
-    prompt(
-      "Recovery password (8–128 chars). Separate from account password:",
-      S.game.recovery
-    );
-
-
-  if(
-    !recovery||
-    recovery.length<8
-  ){
-
-    toast(
-      "Recovery password must be at least 8 characters."
-    );
-
-    return;
-  }
-
-
-  S.game.title=
-    title.trim();
-
-  S.game.description=
-    desc.trim();
-
-  S.game.maturity=
-    mat.trim();
-
-  S.game.recovery=
-    recovery;
-
-
-  let id=S.game.id;
-
-
-  if(!id){
-
-    const {
-      data,
-      error
-    }=await db.rpc(
-      "create_game",
-      {
-        p_title:S.game.title,
-        p_description:S.game.description,
-        p_game_type:"2d",
-        p_maturity_rating:
-          S.game.maturity
-      }
-    );
-
-
-    if(error){
-
-      toast(
-        friendly(error.message)
-      );
-
-      return;
-    }
-
-
-    id=data.id;
-
-    S.game.id=id;
-  }
-
-
-  const {
-    error:re
-  }=await db.rpc(
-    "set_game_recovery_password",
-    {
-      p_game_id:id,
-      p_password:recovery
-    }
-  );
-
-
-  if(re){
-
-    toast(
-      friendly(re.message)
-    );
-
-    return;
-  }
-
-
-  const {
-    error:ve
-  }=await db
-    .from("game_versions")
-    .update({
-      asset_manifest:
-        manifest()
-    })
-    .eq(
-      "game_id",
-      id
-    )
-    .eq(
-      "status",
-      "draft"
-    )
-    .eq(
-      "created_by",
-      S.user.id
-    );
-
-
-  if(ve){
-
-    toast(
-      "Draft could not be saved."
-    );
-
-    return;
-  }
-
-
-  if(publish){
-
-    const {
-      error
-    }=await db.rpc(
-      "publish_game",
-      {
-        p_game_id:id,
-        p_manifest:manifest()
-      }
-    );
-
-
-    if(error){
-
-      toast(
-        friendly(error.message)
-      );
-
-      return;
-    }
-
-
-    toast(
-      "Game published."
-    );
-
-    go("play");
-
-  }else{
-
-    toast(
-      "Draft saved to Supabase."
-    );
-  }
-}
-
-
-function testGame(){
-
-  openGeneric(`
-
-    <div class="head">
-
-      <div>
-
-        <h2>
-          ▶ Test Mode
-        </h2>
-
-        <p>
-          Your current editor manifest
-          is being tested.
-        </p>
-
-      </div>
-
-
-      <button
-        class="btn"
-        onclick="closeGeneric()">
-
-        Exit Test
-
-      </button>
-
-    </div>
-
-
-    <div class="notice ok">
-
-      Test mode is local to this editor
-      session. Publishing writes the game
-      version to Supabase.
-
-    </div>
-
-
-    <div
-      class="canvas"
-      id="testCanvas"
-      style="margin-top:12px">
-    </div>
-
-  `);
-
-
-  setTimeout(()=>{
-
-    $("testCanvas").innerHTML=
-      $("canvas").innerHTML;
-
-  },0);
-}
-
-
-/* =========================================================
-   PROFILE
-========================================================= */
-
-function renderProfile(){
-
-  const box=
-    $("profileBox");
-
-
-  if(!logged()){
-
-    box.innerHTML=`
-
-      <div class="card">
-
-        <h3>Guest</h3>
-
-        <p>
-          Log in to view your creator
-          profile and subscription.
-        </p>
-
-        <button
-          class="btn primary"
-          onclick="openAuth()">
-
-          Log in / Join
-
-        </button>
-
-      </div>
-
-    `;
-
-    return;
-  }
-
-
-  const e=S.ent||{};
-
-  const storage=
-    (
-      e.storage_limit_bytes||
-      10737418240
-    )/
-    1073741824;
-
-
-  box.innerHTML=`
-
-    <div class="grid two">
-
-      <div class="card">
-
-        <div class="kicker">
-          Creator
-        </div>
-
-        <h2>
-          ${esc(
-            S.profile?.display_name||
-            S.profile?.username
-          )}
-        </h2>
-
-        <p>
-          @${esc(
-            S.profile?.username||
-            ""
-          )}
-        </p>
-
-        <p>
-          Age category:
-          <b>
-            ${esc(
-              S.profile?.age_category||
-              ""
-            )}
-          </b>
-        </p>
-
-        <p>
-          Followers:
-          ${S.profile?.followers_count||0}
-          ·
-          Rating:
-          ${S.profile?.creator_rating||0}/5
-        </p>
-
-      </div>
-
-
-      <div class="card">
-
-        <div class="kicker">
-          Plan
-        </div>
-
-        <h2>
-          ${esc(planName())}
-        </h2>
-
-        <p>
-          Status:
-          ${esc(
-            e.status||
-            "active"
-          )}
-        </p>
-
-        <p>
-          Workspace:
-          ${storage.toFixed(0)}
-          GB
-        </p>
-
-        <p>
-          Expires:
-          ${esc(
-            e.ends_at
-              ?new Date(
-                e.ends_at
-              ).toLocaleString()
-              :"—"
-          )}
-        </p>
-
-        <button
-          class="btn primary"
-          onclick="openPlans()">
-
-          ↑ Upgrade / Renew
-
-        </button>
-
-      </div>
-
-    </div>
-
-
-    <div class="card section">
-
-      <div class="kicker">
-        METPAY
-      </div>
-
-      <h3>
-        METXON economy checkout
-      </h3>
-
-      <p>
-        MetGames creates the secure pending
-        payment record in Supabase, then
-        hands the user to the external METPAY
-        checkout. MetGames never asks for or
-        stores the METACCOUNT password.
-      </p>
-
-      <button
-        class="btn primary"
-        onclick="openPlans()">
-
-        Open plans
-
-      </button>
-
-    </div>
-
-  `;
-}
-
-
-/* =========================================================
-   SUBSCRIPTIONS
-========================================================= */
-
-function openPlans(){
-
-  const ps=
-    S.plans.length
-
-      ?S.plans
-
-      :[
-
-        {
-          id:"free",
-          name:"Free Creator",
-          price_jp_week:0,
-          storage_limit_bytes:
-            10737418240
-        },
-
-        {
-          id:"base",
-          name:"Base",
-          price_jp_week:500,
-          storage_limit_bytes:
-            32212254720
-        },
-
-        {
-          id:"silver",
-          name:"Silver",
-          price_jp_week:2000,
-          storage_limit_bytes:
-            53687091200
-        },
-
-        {
-          id:"gold",
-          name:"Gold",
-          price_jp_week:5000,
-          storage_limit_bytes:
-            80530636800
-        }
-
-      ];
-
-
-  openGeneric(`
-
-    <div class="head">
-
-      <div>
-
-        <h2>
-          Creator plans
-        </h2>
-
-        <p>
-          Weekly prices use Jurassic Points (JP).
-        </p>
-
-      </div>
-
-      <button
-        class="btn"
-        onclick="closeGeneric()">
-
-        Close
-
-      </button>
-
-    </div>
-
-
-    <div class="plans">
-
-      ${
-        ps.map(p=>`
-
-          <div class="plan">
-
-            <h3>
-              ${esc(p.name)}
-            </h3>
-
-            <div class="price">
-              ${p.price_jp_week||0}
-              JP/week
-            </div>
-
-            <ul>
-
-              <li>
-                ${
-                  (
-                    p.storage_limit_bytes||
-                    0
-                  )/
-                  1073741824
-                .toFixed(0)}
-                GB workspace
-              </li>
-
-              <li>
-                ${
-                  p.id==="free"
-                    ?"5 games/week"
-                    :"Unlimited creation"
-                }
-              </li>
-
-              <li>
-                ${
-                  (
-                    p.id==="silver"||
-                    p.id==="gold"
-                  )
-                    ?"Trailer creation"
-                    :"Trailer locked"
-                }
-              </li>
-
-              <li>
-                ${
-                  p.id==="gold"
-                    ?"Create targeted ads"
-                    :"Ads locked"
-                }
-              </li>
-
-            </ul>
-
-
-            <button
-
-              class="btn ${
-                p.id===plan()
-                  ?""
-                  :"primary"
-              }"
-
-              ${
-                p.id===plan()
-                  ?"disabled"
-                  :""
-              }
-
-              onclick="
-                payPlan('${p.id}')
-              ">
-
-              ${
-                p.id===plan()
-                  ?"Current"
-                  :"Continue with METPAY"
-              }
-
-            </button>
-
-          </div>
-
-        `).join("")
-      }
-
-    </div>
-
-  `);
-}
-
-
-async function payPlan(id){
-
-  if(id==="free")
-    return;
-
-
-  const currency=
-    prompt(
-      "Payment display currency (INR, USD, GBP, EUR or AED):",
-      "INR"
-    );
-
-
-  if(!currency)
-    return;
-
-
-  try{
-
-    const {
-      data,
-      error
-    }=await db.functions.invoke(
-      "metgames-payment",
-      {
-        body:{
-          action:"start",
-          planId:id,
-          currency:
-            currency.toUpperCase(),
-          username:
-            S.profile?.username
-        }
-      }
-    );
-
-
-    if(error||data?.error){
-
-      toast(
-        data?.error||
-        friendly(error?.message)
-      );
-
-      return;
-    }
-
-
-    if(data.checkout_url){
-
-      window.open(
-        data.checkout_url,
-        "_blank",
-        "noopener"
-      );
-
-    }else{
-
-      toast(
-        "METPAY checkout was not returned."
-      );
-    }
-
-
-  }catch(e){
-
-    toast(
-      "METPAY checkout could not be started."
-    );
-  }
-}
-
-
-/* =========================================================
-   MEX AI
-========================================================= */
-
-async function mexAI(){
-
-  if(!requireLogin())
-    return;
-
-
-  const promptText=
-    prompt(
-      "What should MEX AI help you build?"
-    );
-
-
-  if(!promptText)
-    return;
-
-
-  $("mexReply").innerHTML=
-    '<div class="notice">MEX AI is thinking…</div>';
-
-
-  const {
-    data,
-    error
-  }=await db.functions.invoke(
-    "mex-ai",
-    {
-      body:{
-        message:promptText,
-        context:{
-          mode:"advanced_studio"
-        }
-      }
-    }
-  );
-
-
-  if(error||data?.error){
-
-    msg(
-      $("mexReply"),
-      data?.error||
-      "MEX AI is not configured yet. The API key must be stored in the Edge Function secrets.",
-      "warn"
-    );
-
-    return;
-  }
-
-
-  $("mexReply").innerHTML=
-    '<div class="notice ok">'+
-    esc(
-      data.reply||
-      "No response."
-    )+
-    "</div>";
-}
-
-
-$("mexAsk").onclick=
-  mexAI;
-
-
-/* =========================================================
-   GENERIC MODAL
-========================================================= */
-
-function openGeneric(h){
-
-  $("genericBody").innerHTML=h;
-
-  $("generic")
-    .classList
-    .add("show");
-}
-
-
-function closeGeneric(){
-
-  $("generic")
-    .classList
-    .remove("show");
-}
-
-
-$("generic").onclick=e=>{
-
-  if(e.target.id==="generic")
-    closeGeneric();
 };
 
 
-$("refreshGames").onclick=
-  loadGames;
+/* -----------------------------
+   INITIAL CREATE STATE
+----------------------------- */
 
-$("refreshTrailers").onclick=
-  loadTrailers;
+$("advancedChoice").classList.remove(
+  "locked"
+);
 
 
+/* -----------------------------
+   FRIENDLY LOCK VISUAL
+----------------------------- */
+
+function updateCreatorLocks(){
+
+  const p=plan();
+
+  const locked=
+    !["base","silver","gold"]
+      .includes(p);
+
+  $("advancedChoice")
+    .classList.toggle(
+      "locked",
+      locked
+    );
+
+  $("advancedBtn").textContent=
+    locked
+    ?"🔒 Advanced Studio"
+    :"Open Advanced Studio";
+
+  $("adsBtn").textContent=
+    p==="gold"
+    ?"Create Ads"
+    :"🔒 Create Ads";
+
+}
+
+const oldUpdateHeader=
+  updateHeader;
+
+updateHeader=function(){
+
+  oldUpdateHeader();
+
+  updateCreatorLocks();
+
+};
+
+
+/* -----------------------------
+   SAFETY CHECK FOR PUBLIC
+   CREATOR ACTIONS
+----------------------------- */
+
+window.addEventListener(
+  "beforeunload",
+  ()=>{
+    /*
+      Drafts are saved through Supabase.
+      No localStorage is used by MetGames.
+    */
+  }
+);
+
+</script><script>
 /* =========================================================
-   FPS COUNTER
-========================================================= */
-
-let last=performance.now();
-
-let frames=0;
+   PART 5 — FINAL UI WIRING
+   ========================================================= */
 
 
-function fps(t){
+/* -----------------------------
+   AUTH MODAL CLEANUP
+----------------------------- */
 
-  frames++;
+$("authModal").addEventListener(
+  "click",
+  e=>{
+    if(e.target.id==="authModal")
+      closeAuth();
+  }
+);
 
-  if(t-last>1000){
 
-    $("fps").textContent=
-      Math.round(
-        frames*1000/(t-last)
-      )+
-      " FPS";
+/* -----------------------------
+   PLAN REFRESH AFTER LOGIN
+----------------------------- */
 
-    frames=0;
+async function refreshAccount(){
 
-    last=t;
+  try{
+
+    await userState();
+
+    updateHeader();
+
+    if(S.route==="profile")
+      renderProfile();
+
+  }catch(e){
+
+    console.warn(
+      "Account refresh:",
+      e
+    );
+
   }
 
-  requestAnimationFrame(fps);
 }
 
 
-requestAnimationFrame(fps);
+/* -----------------------------
+   HANDLE AUTH SESSION
+----------------------------- */
+
+db.auth.onAuthStateChange(
+  async(event,session)=>{
+
+    S.user=
+      session?.user||
+      null;
+
+    if(S.user){
+
+      try{
+        await userState();
+      }catch(e){
+        console.warn(e);
+      }
+
+    }else{
+
+      S.profile=null;
+      S.ent=null;
+
+    }
+
+    updateHeader();
+
+    if(S.route==="profile")
+      renderProfile();
+
+  }
+);
 
 
-/* =========================================================
-   START APPLICATION
-========================================================= */
+/* -----------------------------
+   HASH ROUTING
+----------------------------- */
+
+function initialRoute(){
+
+  const r=
+    location.hash
+      .replace("#","")
+      .trim();
+
+  const valid=[
+    "home",
+    "play",
+    "trailers",
+    "create",
+    "profile",
+    "creator",
+    "advanced"
+  ];
+
+  return valid.includes(r)
+    ?r
+    :"home";
+
+}
+
+
+/* -----------------------------
+   MAKE HEADER ACTIVE
+----------------------------- */
+
+function syncNav(){
+
+  document
+    .querySelectorAll(
+      ".links button[data-route]"
+    )
+    .forEach(button=>{
+
+      button.classList.toggle(
+        "active",
+        button.dataset.route===
+        S.route
+      );
+
+    });
+
+}
+
+
+/* -----------------------------
+   KEEP ROUTE IN URL
+----------------------------- */
+
+const originalGo=
+  go;
+
+go=function(route){
+
+  if(location.hash.replace("#","")!==route){
+
+    history.replaceState(
+      null,
+      "",
+      "#"+route
+    );
+
+  }
+
+  originalGo(route);
+
+  syncNav();
+
+};
+
+
+/* -----------------------------
+   INITIAL STARTUP
+----------------------------- */
 
 (async()=>{
 
-  await userState();
+  try{
+
+    await refreshAccount();
+
+  }catch(e){
+
+    console.warn(
+      "MetGames startup:",
+      e
+    );
+
+  }
+
+  const r=
+    initialRoute();
+
+  /*
+    Start directly on the selected route.
+  */
+  if(r!=="home")
+    go(r);
+  else{
+
+    S.route="home";
+
+    document
+      .querySelectorAll(".page")
+      .forEach(p=>
+        p.classList.remove("active")
+      );
+
+    $("home")
+      .classList.add("active");
+
+    syncNav();
+
+  }
 
   updateHeader();
 
-  render();
-
 })();
+
+
+/* -----------------------------
+   KEYBOARD SHORTCUT
+----------------------------- */
+
+document.addEventListener(
+  "keydown",
+  e=>{
+
+    if(
+      e.key==="Escape" &&
+      $("genericModal").classList.contains("show")
+    ){
+      closeGeneric();
+    }
+
+    if(
+      e.key==="Escape" &&
+      $("authModal").classList.contains("show")
+    ){
+      closeAuth();
+    }
+
+  }
+);
+
+
+/* -----------------------------
+   PREVENT ACCIDENTAL
+   FORM SUBMISSION
+----------------------------- */
+
+document.addEventListener(
+  "submit",
+  e=>{
+    e.preventDefault();
+  }
+);
+
+
+/* -----------------------------
+   FINAL CONSOLE MESSAGE
+----------------------------- */
+
+console.log(
+  "MetGames loaded — A METXON Product"
+);
+
 </script>
 
 </body>
