@@ -1182,10 +1182,74 @@ async function createAdNow(){
   }catch(x){status.className="notice bad";status.textContent=x.message||"Advertisement failed.";}
 }
 
+async function uploadProfilePhoto(){
+  if(!currentUser)return;
+  const input=document.getElementById("profilePhotoInput");
+  const file=input?.files?.[0];
+  if(!file)return;
+  if(!file.type.startsWith("image/")){toast("Please choose an image file.","bad");return;}
+  if(file.size>5*1024*1024){toast("Profile photos must be 5 MB or smaller.","bad");return;}
+  try{
+    const ext=(file.name.split(".").pop()||"jpg").toLowerCase().replace(/[^a-z0-9]/g,"")||"jpg";
+    const path=`${currentUser.id}/avatar.${ext}`;
+    const {error}=await db.storage.from("avatars").upload(path,file,{upsert:true,contentType:file.type,cacheControl:"3600"});
+    if(error)throw error;
+    const {data:urlData}=db.storage.from("avatars").getPublicUrl(path);
+    const avatarUrl=`${urlData.publicUrl}?v=${Date.now()}`;
+    const {error:updateError}=await db.from("profiles").update({avatar_url:avatarUrl,updated_at:new Date().toISOString()}).eq("id",currentUser.id);
+    if(updateError)throw updateError;
+    await refreshUser();
+    toast("Profile photo updated.","ok");
+    renderProfile();
+  }catch(e){console.error(e);toast(e.message||"Could not upload profile photo.","bad");}
+}
+
+async function createProfileStatus(){
+  if(!currentUser)return;
+  const input=document.getElementById("statusPhotoInput"), caption=document.getElementById("statusCaption")?.value.trim()||"";
+  const file=input?.files?.[0];
+  if(!file){toast("Choose a photo for your status.","bad");return;}
+  if(!file.type.startsWith("image/")){toast("Status updates must be images.","bad");return;}
+  if(file.size>10*1024*1024){toast("Status photos must be 10 MB or smaller.","bad");return;}
+  try{
+    const ext=(file.name.split(".").pop()||"jpg").toLowerCase().replace(/[^a-z0-9]/g,"")||"jpg";
+    const path=`${currentUser.id}/${crypto.randomUUID()}.${ext}`;
+    const {error}=await db.storage.from("status-photos").upload(path,file,{contentType:file.type,cacheControl:"3600"});
+    if(error)throw error;
+    const {data:urlData}=db.storage.from("status-photos").getPublicUrl(path);
+    const {error:insertError}=await db.from("profile_statuses").insert({user_id:currentUser.id,image_url:urlData.publicUrl,caption:caption||null});
+    if(insertError)throw insertError;
+    if(input)input.value="";
+    const cap=document.getElementById("statusCaption");if(cap)cap.value="";
+    toast("Status posted.","ok");
+    renderProfile();
+  }catch(e){console.error(e);toast(e.message||"Could not post status.","bad");}
+}
+
+async function deleteProfileStatus(id){
+  if(!currentUser||!id)return;
+  if(!confirm("Delete this status?"))return;
+  const {error}=await db.from("profile_statuses").delete().eq("id",id).eq("user_id",currentUser.id);
+  if(error){toast(error.message||"Could not delete status.","bad");return;}
+  toast("Status deleted.","ok");
+  renderProfile();
+}
+
 async function renderProfile(){
   if(!currentUser){openAuth();return;}
-  const {data:games}=await db.from("games").select("id,title,status,game_type").eq("owner_id",currentUser.id).order("created_at",{ascending:false});
-  setApp(`<div class="profile"><div class="profile-head"><div class="avatar">${esc((currentProfile?.username||"U")[0].toUpperCase())}</div><div><h2 style="margin:0">${esc(currentProfile?.display_name||"METGAMES User")}</h2><div class="small">@${esc(currentProfile?.username||"user")}</div><div class="meta"><span class="tag">${esc(currentProfile?.age_category||"")}</span><span class="tag">Creator rating ${Number(currentProfile?.creator_rating||0).toFixed(1)}</span><span class="tag">Followers ${currentProfile?.followers_count||0}</span><span class="tag">Plan ${esc(currentEntitlement?.plan_id||"free")}</span></div></div></div><div class="section-title"><h2>Account & Studio</h2></div><div class="notice">Your METGAMES username is your creator identity. Subscriptions are weekly and use the METXON fictional JP economy.</div><div style="margin-top:15px"><button class="btn primary" onclick="openPlans()">${isStudio()?"Manage / Renew subscription":"Upgrade subscription"}</button></div><div class="section-title"><h2>Your Games</h2></div><div class="grid">${(games||[]).map(g=>`<article class="card"><div class="thumbnail">${esc(g.game_type.toUpperCase())}</div><div class="card-body"><h3>${esc(g.title)}</h3><span class="tag">${esc(g.status)}</span><button class="btn full" style="margin-top:10px" onclick="openCreator('${g.id}')">Open Creator</button></div></article>`).join("")||`<div class="empty">No games yet.</div>`}</div></div>`);
+  const [gamesRes,statusRes]=await Promise.all([
+    db.from("games").select("id,title,status,game_type").eq("owner_id",currentUser.id).order("created_at",{ascending:false}),
+    db.from("profile_statuses").select("id,image_url,caption,created_at").eq("user_id",currentUser.id).order("created_at",{ascending:false}).limit(20)
+  ]);
+  const games=gamesRes.data||[];
+  const statuses=statusRes.data||[];
+  const avatar=currentProfile?.avatar_url;
+  const avatarHtml=avatar?`<img src="${esc(avatar)}" alt="Profile photo" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:esc((currentProfile?.username||"U")[0].toUpperCase());
+  const statusCards=statuses.map(st=>`<article class="card"><div style="aspect-ratio:16/10;overflow:hidden;background:#0b1020"><img src="${esc(st.image_url)}" alt="Status photo" style="width:100%;height:100%;object-fit:cover"></div><div class="card-body"><div class="small">${new Date(st.created_at).toLocaleString()}</div>${st.caption?`<p style="margin:8px 0">${esc(st.caption)}</p>`:""}<button class="btn" onclick="deleteProfileStatus('${st.id}')">Delete</button></div></article>`).join("");
+  setApp(`<div class="profile"><div class="profile-head"><div class="avatar" style="overflow:hidden">${avatarHtml}</div><div><h2 style="margin:0">${esc(currentProfile?.display_name||"METGAMES User")}</h2><div class="small">@${esc(currentProfile?.username||"user")}</div><div class="meta"><span class="tag">${esc(currentProfile?.age_category||"")}</span><span class="tag">Creator rating ${Number(currentProfile?.creator_rating||0).toFixed(1)}</span><span class="tag">Followers ${currentProfile?.followers_count||0}</span><span class="tag">Plan ${esc(currentEntitlement?.plan_id||"free")}</span></div></div></div>
+  <div class="section-title"><h2>Profile Photo</h2></div><div class="notice">Choose a profile photo to use as your DP.</div><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px"><input id="profilePhotoInput" type="file" accept="image/*" class="input"><button class="btn primary" onclick="uploadProfilePhoto()">Upload DP</button></div>
+  <div class="section-title"><h2>Status</h2></div><div class="notice">Share a photo as your MetGames status. Status photos are stored in Supabase and shown on your profile.</div><div style="margin-top:12px"><input id="statusPhotoInput" type="file" accept="image/*" class="input"><textarea id="statusCaption" class="input" rows="3" placeholder="Write a caption (optional)" style="margin-top:10px;width:100%"></textarea><button class="btn primary" style="margin-top:10px" onclick="createProfileStatus()">Post Photo Status</button></div><div class="grid" style="margin-top:16px">${statusCards||`<div class="empty">No statuses yet.</div>`}</div>
+  <div class="section-title"><h2>Account & Studio</h2></div><div class="notice">Your METGAMES username is your creator identity. Subscriptions are weekly and use the METXON fictional JP economy.</div><div style="margin-top:15px"><button class="btn primary" onclick="openPlans()">${isStudio()?"Manage / Renew subscription":"Upgrade subscription"}</button></div><div class="section-title"><h2>Your Games</h2></div><div class="grid">${games.map(g=>`<article class="card"><div class="thumbnail">${esc(g.game_type.toUpperCase())}</div><div class="card-body"><h3>${esc(g.title)}</h3><span class="tag">${esc(g.status)}</span><button class="btn full" style="margin-top:10px" onclick="openCreator('${g.id}')">Open Creator</button></div></article>`).join("")||`<div class="empty">No games yet.</div>`}</div></div>`);
 }
 
 async function renderCreateFallback(){return renderCreate();}
@@ -1201,6 +1265,19 @@ async function openPlans(){
 function closePlans(){document.getElementById("plansModal").classList.remove("open");}
 function openGeneric(html){document.getElementById("genericModalBox").innerHTML=html;document.getElementById("genericModal").classList.add("open");}
 function closeGeneric(){document.getElementById("genericModal").classList.remove("open");document.getElementById("genericModalBox").innerHTML="";}
+async function edgeErrorText(error,fallback="The server could not complete that request."){
+  if(!error)return fallback;
+  try{
+    const response=error.context;
+    if(response&&typeof response.clone==="function"){
+      const copy=response.clone();
+      const body=await copy.json().catch(()=>null);
+      if(body?.error)return String(body.error);
+      if(body?.message)return String(body.message);
+    }
+  }catch{}
+  return error.message&&error.message!=="Edge Function returned a non-2xx status code"?String(error.message):fallback;
+}
 async function startPayment(planId){
   if(!currentUser){closePlans();openAuth();return;}
   const currency=prompt("METPAY display currency (INR/USD/GBP/EUR/AED):","INR")?.trim().toUpperCase()||"INR";
@@ -1209,7 +1286,7 @@ async function startPayment(planId){
   try{
     toast("Preparing METPAY…");
     const {data:start,error:startError}=await db.functions.invoke("metgames-payment",{body:{action:"start",planId,currency,username:currentProfile?.username}});
-    if(startError)throw Error(startError.message);
+    if(startError)throw Error(await edgeErrorText(startError,"METPAY could not start the payment."));
     if(start?.error)throw Error(start.error);
 
     const username=String(currentProfile?.username||"").trim().toLowerCase();
@@ -1246,7 +1323,7 @@ async function startPayment(planId){
     const {data:complete,error:completeError}=await db.functions.invoke("metgames-payment",{body:{
       action:"complete",planId,reference:start.reference,amountJp:Number(start.amount_jp),oldAccessToken:oldSession.access_token
     }});
-    if(completeError)throw Error(completeError.message);
+    if(completeError)throw Error(await edgeErrorText(completeError,"METPAY payment verification failed."));
     if(complete?.error)throw Error(complete.error);
 
     await metxonClient.auth.signOut();
