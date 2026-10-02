@@ -676,6 +676,13 @@ footer a{
 .small{font-size:12px;color:var(--muted)}
 @media(max-width:1100px){.plan-grid{grid-template-columns:repeat(2,1fr)}.studio-grid{grid-template-columns:1fr}.studio-side,.studio-side.right{border:0;border-bottom:1px solid var(--line)}}
 @media(max-width:650px){.creator-choice,.plan-grid,.media-grid{grid-template-columns:1fr}}
+
+.creator-chip{display:inline-flex;align-items:center;gap:5px}.creator-chip img{width:20px;height:20px;border-radius:50%;object-fit:cover}.header-avatar{width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#182238;border:1px solid #33415f;color:#fff;font-weight:900;overflow:hidden;flex:0 0 32px}.header-avatar img{width:100%;height:100%;object-fit:cover}.small-avatar{width:46px;height:46px;flex:0 0 46px;overflow:hidden;display:flex;align-items:center;justify-content:center;border-radius:50%}.small-avatar img{width:100%;height:100%;object-fit:cover}.search-box{display:flex;gap:10px;max-width:760px}.search-box .input{flex:1}.rule-builder{padding:12px;border:1px solid var(--line);border-radius:12px;background:#0b101a}.rule-row{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:9px 10px;margin-top:8px;border:1px solid #263149;border-radius:9px;background:#0b111e}
+@media(max-width:900px){header{padding:0 12px;height:auto;min-height:70px;flex-wrap:wrap}.brand{min-width:150px}.brand img{width:110px}.brand>span{display:none}nav{order:3;width:100%;overflow-x:auto;flex-basis:100%;padding-bottom:5px}.account{margin-left:auto}.account-name{display:none}.studio-grid{grid-template-columns:1fr}.studio-side{order:2}.studio-center{order:1}.form-row{grid-template-columns:1fr!important}}
+@media(max-width:700px){body{min-width:0}.search-box{flex-direction:column}.hero{grid-template-columns:1fr!important}.grid{grid-template-columns:1fr!important}.account .upgrade-chip{display:none}.studio-shell{min-width:0}.studio-canvas{width:100%;height:auto}.tool-grid{grid-template-columns:repeat(2,1fr)!important}}
+@media(orientation:portrait) and (max-width:700px){body:before{content:"Rotate your phone to landscape for the full METGAMES creator workspace.";position:fixed;left:0;right:0;bottom:0;z-index:10000;padding:9px 12px;text-align:center;background:#111a2a;color:#dce7ff;font-size:12px;border-top:1px solid #2d3c59}}
+
+.game-chat{margin-top:16px;border:1px solid var(--line);border-radius:14px;background:#0a0f18;padding:12px}.chat-head{display:flex;justify-content:space-between;gap:10px;align-items:center}.chat-messages{height:180px;overflow:auto;margin:10px 0;padding:8px;border-radius:10px;background:#070b12}.chat-msg{padding:6px 8px;border-bottom:1px solid #182236}.chat-user{font-weight:800;margin-right:8px}.chat-compose{display:flex;gap:8px}.chat-compose input{flex:1}
 </style>
 </head>
 
@@ -693,10 +700,12 @@ footer a{
     <button data-nav="play" onclick="navigate('play')">Play</button>
     <button data-nav="trailers" onclick="navigate('trailers')">Watch Trailers</button>
     <button data-nav="create" onclick="navigate('create')">Create</button>
+    <button data-nav="search" onclick="navigate('search')">Search</button>
     <button data-nav="profile" onclick="navigate('profile')">Profile</button>
   </nav>
   <div class="account">
     <button class="upgrade-chip" id="planButton" onclick="openPlans()">↑ Upgrade</button>
+    <span id="headerAvatar" class="header-avatar">G</span>
     <span class="account-name" id="accountName">Guest</span>
     <span class="tag">FPS <b id="headerFps">--</b></span>
     <button class="btn" id="accountButton" onclick="openAuth()">Login</button>
@@ -744,6 +753,7 @@ footer a{
     <div><label>Game name</label><input id="newGameTitle" maxlength="120" required placeholder="Block Breaker"></div>
     <div><label>Description</label><textarea id="newGameDescription" maxlength="2000" placeholder="What is your game about?"></textarea></div>
     <div class="form-row"><div><label>Maturity rating</label><select id="newGameMaturity"><option value="all">All</option><option value="7+">7+</option><option value="12+">12+</option><option value="13+">13+</option><option value="16+">16+</option><option value="18+">18+</option></select></div><div><label>Game type</label><input id="newGameTypeLabel" disabled value="2D"></div></div>
+    <div id="chatOptionWrap" class="notice" style="display:none"><label style="display:flex;align-items:center;gap:10px;cursor:pointer"><input id="newGameChat" type="checkbox"> Enable game chat</label><div class="small" style="margin-top:6px">Chat is available only for games rated 13+ or higher. Messages are checked server-side.</div></div>
     <div class="notice"><b>Pay to play</b><br>Default: No. If enabled, players pay once through METPAY before they can play the published game. METPAY settlement uses the fictional METXON JP ledger; this prototype does not connect to cards or bank payments.</div>
     <div class="form-row"><div><label>Pay to play needed?</label><select id="newGamePay" onchange="toggleNewGamePayFields()"><option value="no">No</option><option value="yes">Yes</option></select></div><div id="newGamePriceWrap" style="display:none"><label>Price</label><input id="newGamePrice" inputmode="decimal" placeholder="1000"></div></div>
     <div id="newGameCurrencyWrap" style="display:none"><label>Currency</label><select id="newGameCurrency"><option>INR</option><option>USD</option><option>GBP</option><option>EUR</option><option>AED</option><option>JP</option></select></div>
@@ -783,7 +793,7 @@ const PUBLIC_BUCKET="metgames-public";
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 function esc(v){return String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");}
 function attr(v){return esc(v);}
-function toast(message,type=""){const box=document.getElementById("toast");box.innerHTML=`<div class="notice ${type}" style="box-shadow:0 18px 50px rgba(0,0,0,.4)">${esc(message)}</div>`;clearTimeout(window.__toast);window.__toast=setTimeout(()=>box.innerHTML="",5000);}
+function toast(message,type=""){message=String(message||"");if(/Edge Function returned a non-2xx|non-2xx status/i.test(message))message="This feature is unavailable right now. Please try again later.";const box=document.getElementById("toast");box.innerHTML=`<div class="notice ${type}" style="box-shadow:0 18px 50px rgba(0,0,0,.4)">${esc(message)}</div>`;clearTimeout(window.__toast);window.__toast=setTimeout(()=>box.innerHTML="",5000);}
 function setApp(html){document.getElementById("app").innerHTML=html;}
 function isStudio(){return ["base","silver","gold"].includes(currentEntitlement?.plan_id) && currentEntitlement?.status==="active" && (!currentEntitlement.ends_at || new Date(currentEntitlement.ends_at)>new Date());}
 function canTrailer(){return ["silver","gold"].includes(currentEntitlement?.plan_id)&&isStudio();}
@@ -805,9 +815,9 @@ async function refreshUser(){
   updateAccountUI();
 }
 function updateAccountUI(){
-  const n=document.getElementById("accountName"),b=document.getElementById("accountButton"),p=document.getElementById("planButton");
-  if(currentUser){n.textContent=currentProfile?.username||"Account";b.textContent="Logout";b.onclick=logout;}
-  else{n.textContent="Guest";b.textContent="Login";b.onclick=openAuth;}
+  const n=document.getElementById("accountName"),b=document.getElementById("accountButton"),p=document.getElementById("planButton"),a=document.getElementById("headerAvatar");
+  if(currentUser){n.textContent=currentProfile?.username||"Account";b.textContent="Logout";b.onclick=logout; if(a){a.innerHTML=currentProfile?.avatar_url?`<img src="${esc(currentProfile.avatar_url)}" alt="">`:esc((currentProfile?.username||"U")[0].toUpperCase());}}
+  else{n.textContent="Guest";b.textContent="Login";b.onclick=openAuth;if(a)a.textContent="G";}
   if(!currentUser){p.textContent="↑ Upgrade";p.onclick=openPlans;}
   else if(isStudio()){p.textContent=currentEntitlement.plan_id==="gold"?"Gold":currentEntitlement.plan_id[0].toUpperCase()+currentEntitlement.plan_id.slice(1);p.onclick=openPlans;}
   else if(currentEntitlement?.status==="active" && currentEntitlement?.ends_at && new Date(currentEntitlement.ends_at)<=new Date()){p.textContent="Renew";p.onclick=openPlans;}
@@ -832,15 +842,15 @@ document.getElementById("authForm").addEventListener("submit",async e=>{
     if(authMode==="register"){
       const displayName=document.getElementById("displayName").value.trim()||username,ageCategory=AGE_MAP[document.getElementById("ageCategory").value];
       const {data,error}=await db.functions.invoke("metgames-auth",{body:{action:"signup",username,password,displayName,ageCategory,display_name:displayName,age_category:ageCategory}});
-      if(error)throw Error(error.message);if(data?.error)throw Error(data.error);if(!data?.session)throw Error("No login session was returned.");
+      if(error)throw Error(await edgeErrorText(error,"METGAMES login service is unavailable right now. Please try again later."));if(data?.error)throw Error(data.error);if(!data?.session)throw Error("METGAMES login service did not return a session.");
       const {error:setErr}=await db.auth.setSession(data.session);if(setErr)throw setErr;
     }else{
       const {data,error}=await db.functions.invoke("metgames-auth",{body:{action:"login",username,password}});
-      if(error)throw Error(error.message);if(data?.error)throw Error(data.error);if(!data?.session)throw Error("No login session was returned.");
+      if(error)throw Error(await edgeErrorText(error,"METGAMES login service is unavailable right now. Please try again later."));if(data?.error)throw Error(data.error);if(!data?.session)throw Error("METGAMES login service did not return a session.");
       const {error:setErr}=await db.auth.setSession(data.session);if(setErr)throw setErr;
     }
     await refreshUser();closeAuth();toast("Welcome to METGAMES.","ok");navigate("profile");
-  }catch(x){console.error(x);err.textContent=x.message||"Authentication failed.";}
+  }catch(x){console.error(x);err.textContent=/non-2xx|Edge Function/i.test(String(x.message||""))?"Login service is unavailable right now. Please try again later.":(x.message||"Authentication failed.");}
 });
 async function logout(){await db.auth.signOut();currentUser=null;currentProfile=null;currentEntitlement=null;updateAccountUI();navigate("home");}
 
@@ -848,7 +858,21 @@ async function navigate(page,opt={}){
   if((page==="create"||page==="profile")&&!currentUser){openAuth();return;}
   await transition();currentPage=page;location.hash=page==="game"?`#game/${opt.gameId}`:`#${page}`;
   document.querySelectorAll("[data-nav]").forEach(b=>b.classList.toggle("active",b.dataset.nav===page));
-  if(page==="home")return renderHome();if(page==="play")return renderPlay();if(page==="trailers")return renderTrailers();if(page==="create")return renderCreate();if(page==="profile")return renderProfile();if(page==="game")return renderGame(opt.gameId);
+  if(page==="home")return renderHome();if(page==="play")return renderPlay();if(page==="trailers")return renderTrailers();if(page==="create")return renderCreate();if(page==="search")return renderSearch();if(page==="profile")return renderProfile();if(page==="game")return renderGame(opt.gameId);
+}
+
+async function renderSearch(){
+  setApp(`<div class="section-title"><h2>Search</h2><span>Find players and creators</span></div><div class="search-box"><input id="peopleSearch" class="input" placeholder="Search username or display name…" autocomplete="off"><button class="btn primary" onclick="runPeopleSearch()">Search</button></div><div id="peopleResults" class="grid" style="margin-top:18px"><div class="empty">Type a username or creator name to search.</div></div>`);
+  const input=document.getElementById("peopleSearch"); input?.addEventListener("keydown",e=>{if(e.key==="Enter")runPeopleSearch();});
+}
+async function runPeopleSearch(){
+  const q=document.getElementById("peopleSearch")?.value.trim(); const out=document.getElementById("peopleResults"); if(!out)return;
+  if(!q){out.innerHTML=`<div class="empty">Enter a username or creator name.</div>`;return;}
+  out.innerHTML=`<div class="empty">Searching…</div>`;
+  const safe=q.replaceAll("%","\\%").replaceAll("_","\\_");
+  const {data,error}=await db.from("profiles").select("id,username,display_name,avatar_url,age_category,creator_rating,followers_count").or(`username.ilike.%${safe}%,display_name.ilike.%${safe}%`).order("followers_count",{ascending:false}).limit(30);
+  if(error){out.innerHTML=`<div class="empty">Search is unavailable right now.</div>`;return;}
+  out.innerHTML=(data||[]).map(p=>`<article class="card"><div class="card-body"><div style="display:flex;gap:12px;align-items:center"><div class="avatar small-avatar">${p.avatar_url?`<img src="${esc(p.avatar_url)}" alt="">`:esc((p.username||"U")[0].toUpperCase())}</div><div><h3 style="margin:0">${esc(p.display_name||p.username)}</h3><div class="small">@${esc(p.username||"")}</div></div></div><div class="meta" style="margin-top:12px"><span class="tag">${esc(p.age_category||"")}</span><span class="tag">Rating ${Number(p.creator_rating||0).toFixed(1)}</span><span class="tag">Followers ${Number(p.followers_count||0)}</span></div></div></article>`).join("")||`<div class="empty">No players or creators found.</div>`;
 }
 
 async function renderHome(){
@@ -860,8 +884,8 @@ async function loadGameCards(id,limit=20){
   const {data,error}=await db.from("games").select("id,title,description,game_type,maturity_rating,published_at,owner_id,thumbnail_path,pay_to_play,play_price,play_currency").eq("status","published").order("published_at",{ascending:false}).limit(limit);
   if(error){el.innerHTML=`<div class="empty">Games could not be loaded right now. ${esc(error.message)}</div>`;return;}
   if(!data?.length){el.innerHTML=`<div class="empty">No published games yet.<br>Create the first METGAME.</div>`;return;}
-  const ids=[...new Set(data.map(x=>x.owner_id).filter(Boolean))],profiles=ids.length?(await db.from("profiles").select("id,username").in("id",ids)).data||[]:[],pm={};profiles.forEach(p=>pm[p.id]=p);
-  el.innerHTML=data.map(g=>`<article class="card"><div class="thumbnail">${g.thumbnail_path?`<img src="${esc(g.thumbnail_path)}" style="width:100%;height:100%;object-fit:cover">`:g.game_type==="3d"?"3D":"2D"}</div><div class="card-body"><h3>${esc(g.title)}</h3><p>${esc(g.description||"No description yet.")}</p><div class="meta"><span class="tag">${esc(g.game_type.toUpperCase())}</span><span class="tag">${esc(g.maturity_rating)}</span><span class="tag">@${esc(pm[g.owner_id]?.username||"creator")}</span>${g.pay_to_play?`<span class="tag">Pay ${Number(g.play_price).toLocaleString()} ${esc(g.play_currency)}</span>`:`<span class="tag">Free to play</span>`}</div><button class="btn primary full" style="margin-top:12px" onclick="navigate('game',{gameId:'${g.id}'})">View / Play</button></div></article>`).join("");
+  const ids=[...new Set(data.map(x=>x.owner_id).filter(Boolean))],profiles=ids.length?(await db.from("profiles").select("id,username,avatar_url,display_name").in("id",ids)).data||[]:[],pm={};profiles.forEach(p=>pm[p.id]=p);
+  el.innerHTML=data.map(g=>`<article class="card"><div class="thumbnail">${g.thumbnail_path?`<img src="${esc(g.thumbnail_path)}" style="width:100%;height:100%;object-fit:cover">`:g.game_type==="3d"?"3D":"2D"}</div><div class="card-body"><h3>${esc(g.title)}</h3><p>${esc(g.description||"No description yet.")}</p><div class="meta"><span class="tag">${esc(g.game_type.toUpperCase())}</span><span class="tag">${esc(g.maturity_rating)}</span><span class="tag creator-chip">${pm[g.owner_id]?.avatar_url?`<img src="${esc(pm[g.owner_id].avatar_url)}" alt="">`:esc((pm[g.owner_id]?.username||"C")[0].toUpperCase())} @${esc(pm[g.owner_id]?.username||"creator")}</span>${g.pay_to_play?`<span class="tag">Pay ${Number(g.play_price).toLocaleString()} ${esc(g.play_currency)}</span>`:`<span class="tag">Free to play</span>`}</div><button class="btn primary full" style="margin-top:12px" onclick="navigate('game',{gameId:'${g.id}'})">View / Play</button></div></article>`).join("");
 }
 async function renderPlay(){setApp(`<div class="section-title"><h2>Play</h2><span>Discover published METGAMES</span></div><div id="playGames" class="grid"><div class="empty">Loading…</div></div>`);await loadGameCards("playGames",50);}
 
@@ -904,7 +928,7 @@ async function createTrailerNow(){
     const trailerId=data?.data?.id||data?.data?.trailer_id||data?.trailer_id||data?.id;if(!trailerId)throw Error("Trailer was created but no trailer ID was returned.");
     const pub=await db.functions.invoke("metgames-media",{body:{action:"publish_trailer",trailerId}});if(pub.error)throw Error(pub.error.message);if(pub.data?.error)throw Error(pub.data.error);
     status.className="notice ok";status.textContent="Trailer published successfully.";toast("Trailer published.","ok");setTimeout(()=>renderTrailers(),700);
-  }catch(x){console.error(x);status.className="notice bad";status.textContent=x.message||"Trailer creation failed.";}
+  }catch(x){console.error(x);status.className="notice bad";status.textContent="Trailer creation is unavailable right now. Please try again later.";}
 }
 
 async function renderCreate(){
@@ -931,10 +955,16 @@ function openGameCreate(type){
   document.getElementById("newGameCurrency").value="INR";
   document.getElementById("newGameFormError").textContent="";
   toggleNewGamePayFields();
-  document.getElementById("gameCreateModal").classList.add("open");
+  document.getElementById("gameCreateModal").classList.add("open"); updateChatOption();
   setTimeout(()=>document.getElementById("newGameTitle")?.focus(),50);
 }
 function closeGameCreate(){document.getElementById("gameCreateModal").classList.remove("open");}
+function updateChatOption(){
+  const v=document.getElementById("newGameMaturity")?.value,wrap=document.getElementById("chatOptionWrap"),cb=document.getElementById("newGameChat");
+  const enabled=["13+","16+","18+"].includes(v); if(wrap)wrap.style.display=enabled?"block":"none"; if(!enabled&&cb)cb.checked=false;
+}
+document.getElementById("newGameMaturity")?.addEventListener("change",updateChatOption);
+
 function toggleNewGamePayFields(){
   const on=document.getElementById("newGamePay").value==="yes";
   document.getElementById("newGamePriceWrap").style.display=on?"block":"none";
@@ -978,7 +1008,7 @@ document.getElementById("gameCreateForm").addEventListener("submit",async e=>{
     }
     closeGameCreate();
     await openCreator(g.id);
-  }catch(x){console.error(x);err.textContent=x.message||"Game creation failed.";}
+  }catch(x){console.error(x);err.textContent="Game creation is unavailable right now. Please try again later.";}
 });
 async function loadMyGames(){
   const el=document.getElementById("creatorContent");if(!el)return;
@@ -1001,7 +1031,7 @@ function renderEditor(){
   const el=document.getElementById("creatorContent");if(!el)return;
   el.innerHTML=`<div class="creator-actions"><button class="btn" onclick="loadMyGames()">← My Games</button><button class="btn" onclick="saveProject()">Save Draft</button><button class="btn green" onclick="toggleTestMode()">▶ Test</button><button class="btn primary" onclick="publishCurrentGame()">Publish</button><button class="btn" onclick="openRecovery()">Recovery</button></div>
   <div class="studio-shell"><div class="studio-bar"><div><b>${esc(editor.game.title)}</b><span class="tag" style="margin-left:8px">${esc(editor.game.game_type.toUpperCase())}</span></div><div class="studio-tabs"><button class="active">Scene</button><button onclick="openRulesPanel()">Rules</button><button onclick="addTimelineKey()">Timeline</button></div></div>
-  <div class="studio-grid"><aside class="studio-side"><h3>Assets</h3><div class="tool-grid"><button onclick="addObject('player')">Player</button><button onclick="addObject('platform')">Platform</button><button onclick="addObject('enemy')">Enemy</button><button onclick="addObject('coin')">Coin</button><button onclick="addObject('text')">Text</button><button onclick="addObject('goal')">Goal</button></div><div style="margin-top:15px"><label>Upload asset</label><input type="file" id="assetUpload" accept="image/*" onchange="handleAssetUpload(this)"></div><div class="notice" style="margin-top:12px">Right-click an object to edit its rules. Each object can have its own rules.</div><h3 style="margin-top:18px">Objects</h3><div id="objectList" class="object-list"></div></aside>
+  <div class="studio-grid"><aside class="studio-side"><h3>Assets</h3><div class="tool-grid"><button onclick="addObject('player')">Player</button><button onclick="addObject('platform')">Platform</button><button onclick="addObject('enemy')">Enemy</button><button onclick="addObject('coin')">Coin</button><button onclick="addObject('text')">Text</button><button onclick="addObject('goal')">Goal</button><button onclick="addDynamicAsset('score')">Score</button><button onclick="addDynamicAsset('timer')">Timer</button><button onclick="addDynamicAsset('stopwatch')">Stopwatch</button><button onclick="addDynamicAsset('health')">Health</button><button onclick="addDynamicAsset('coins')">Coins</button><button onclick="addDynamicAsset('speed')">Speed</button></div><div style="margin-top:15px"><label>Upload asset</label><input type="file" id="assetUpload" accept="image/*" onchange="handleAssetUpload(this)"></div><div class="notice" style="margin-top:12px">Right-click an object to edit its rules. Each object can have its own rules. Dynamic assets such as Score, Timer, Stopwatch, Health, Coins and Speed can be added from this menu.</div><h3 style="margin-top:18px">Objects</h3><div id="objectList" class="object-list"></div></aside>
   <section class="studio-center"><canvas id="gameCanvas" class="studio-canvas" width="900" height="500"></canvas><div class="small" style="margin-top:8px">Drag objects. Select one to edit its properties. Test uses the same scene data.</div><div class="timeline"><b>Timeline</b><div class="timeline-track" id="timelineTrack"></div></div><div class="rules" id="rulesPanel"><b>Rules</b><div id="rulesContent" class="small" style="margin-top:8px">Select an object and choose Rules.</div></div></section>
   <aside class="studio-side right"><h3>Properties</h3><div id="properties"></div><hr style="border-color:#243047;margin:15px 0"><h3>Project</h3><div class="small">Status: ${esc(editor.game.status)}</div><div class="small">Workspace: ${isStudio()?"Studio":"Free Creator"}</div><div class="notice" style="margin-top:12px"><b>Play access</b><br>${editor.game.pay_to_play?`Players pay ${Number(editor.game.play_price).toLocaleString()} ${esc(editor.game.play_currency)} once via METPAY.`:`Free to play.`}</div>${editor.advanced?`<div class="notice ok" style="margin-top:12px">Advanced tools active: 3D scene, camera, lighting, physics, Blox and MEX AI.</div><button class="btn full" style="margin-top:8px" onclick="openAdvancedTools()">Advanced Tools</button>`:`<div class="notice" style="margin-top:12px">Free Creator: 2D scene + visual rules.</div>`}</aside></div></div>`;
   renderObjectList();renderProperties();drawEditor();renderRules();drawTimeline();
@@ -1015,13 +1045,13 @@ function selectObject(id){editor.selected=id;renderObjectList();renderProperties
 function deleteObject(id){editor.objects=editor.objects.filter(o=>o.id!==id);if(editor.selected===id)editor.selected=null;editor.dirty=true;renderObjectList();renderProperties();renderRules();drawEditor();}
 function renderProperties(){
   const el=document.getElementById("properties");if(!el)return;const o=editor.objects.find(x=>x.id===editor.selected);if(!o){el.innerHTML=`<div class="status">Select an object.</div>`;return;}
-  el.innerHTML=`<div class="form"><div><label>Type</label><input value="${attr(o.type)}" disabled></div><div><label>X</label><input type="number" value="${o.x}" onchange="changeObject('x',this.value)"></div><div><label>Y</label><input type="number" value="${o.y}" onchange="changeObject('y',this.value)"></div><div><label>Width</label><input type="number" value="${o.width}" onchange="changeObject('width',this.value)"></div><div><label>Height</label><input type="number" value="${o.height}" onchange="changeObject('height',this.value)"></div><div><label>Color</label><input value="${attr(o.color||"#fff")}" onchange="changeObject('color',this.value)"></div>${o.type==="text"?`<div><label>Text</label><input value="${attr(o.text||"")}" onchange="changeObject('text',this.value)"></div>`:""}<button class="btn danger" onclick="deleteObject('${o.id}')">Delete object</button></div>`;
+  el.innerHTML=`<div class="form"><div><label>Type</label><input value="${attr(o.type)}" disabled></div><div><label>X</label><input type="number" value="${o.x}" onchange="changeObject('x',this.value)"></div><div><label>Y</label><input type="number" value="${o.y}" onchange="changeObject('y',this.value)"></div><div><label>Width</label><input type="number" value="${o.width}" onchange="changeObject('width',this.value)"></div><div><label>Height</label><input type="number" value="${o.height}" onchange="changeObject('height',this.value)"></div><div><label>Color</label><input value="${attr(o.color||"#fff")}" onchange="changeObject('color',this.value)"></div><div><label>Speed</label><input type="number" value="${Number(o.speed||220)}" onchange="changeObject('speed',this.value)"></div><div><label>Angle</label><input type="number" value="${Number(o.rotation||0)}" onchange="changeObject('rotation',this.value)"></div><div><label>Touch to move</label><select onchange="changeObject('touchMove',this.value==='yes')"><option value="no" ${o.touchMove?"":"selected"}>Off</option><option value="yes" ${o.touchMove?"selected":""}>On</option></select></div><div><label>Keyboard</label><select onchange="changeObject('keyboardControl',this.value)"><option value="all" ${o.keyboardControl==="all"||!o.keyboardControl?"selected":""}>Every key / controls</option><option value="arrows" ${o.keyboardControl==="arrows"?"selected":""}>Arrow keys</option><option value="wasd" ${o.keyboardControl==="wasd"?"selected":""}>WASD</option><option value="none" ${o.keyboardControl==="none"?"selected":""}>None</option></select></div>${o.type==="text"?`<div><label>Text</label><input value="${attr(o.text||"")}" onchange="changeObject('text',this.value)"></div>`:""}<button class="btn danger" onclick="deleteObject('${o.id}')">Delete object</button></div>`;
 }
 function changeObject(p,v){const o=editor.objects.find(x=>x.id===editor.selected);if(!o)return;o[p]=["x","y","width","height"].includes(p)?Number(v):v;editor.dirty=true;drawEditor();}
 function drawEditor(){
   const c=document.getElementById("gameCanvas");if(!c)return;const ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height);ctx.fillStyle=editor.advanced?"#08121a":"#101724";ctx.fillRect(0,0,c.width,c.height);
   if(editor.advanced){ctx.strokeStyle="rgba(70,150,200,.18)";for(let x=0;x<c.width;x+=50){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,c.height);ctx.stroke()}for(let y=0;y<c.height;y+=50){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(c.width,y);ctx.stroke()}}
-  editor.objects.forEach(o=>{ctx.fillStyle=o.color||"#fff";if(o.type==="coin"){ctx.beginPath();ctx.arc(o.x+o.width/2,o.y+o.height/2,Math.min(o.width,o.height)/2,0,Math.PI*2);ctx.fill()}else if(o.type==="text"){ctx.font="22px Arial";ctx.fillText(o.text||"",o.x,o.y+25)}else ctx.fillRect(o.x,o.y,o.width,o.height);if(editor.selected===o.id){ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.strokeRect(o.x-2,o.y-2,o.width+4,o.height+4);ctx.lineWidth=1;}});
+  editor.objects.forEach(o=>{ctx.fillStyle=o.color||"#fff";if(o.type==="coin"){ctx.beginPath();ctx.arc(o.x+o.width/2,o.y+o.height/2,Math.min(o.width,o.height)/2,0,Math.PI*2);ctx.fill()}else if(o.type==="text"){ctx.font="22px Arial";ctx.fillText(o.text||"",o.x,o.y+25)}else if(o.type==="dynamic"){ctx.font="16px Arial";ctx.fillStyle="#ffffff";ctx.fillText(`${o.label||o.dynamicType}: ${o.dynamicType==="timer"||o.dynamicType==="stopwatch"?"00:00":o.dynamicType==="score"?"0":o.dynamicType==="speed"?"0":"100"}`,o.x,o.y+21)}else ctx.fillRect(o.x,o.y,o.width,o.height);if(editor.selected===o.id){ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.strokeRect(o.x-2,o.y-2,o.width+4,o.height+4);ctx.lineWidth=1;}});
 }
 function bindEditorCanvas(){
   const c=document.getElementById("gameCanvas");if(!c)return;let drag=false,ox=0,oy=0;
@@ -1031,25 +1061,26 @@ function bindEditorCanvas(){
   c.onpointerup=c.onpointercancel=()=>drag=false;
 }
 function renderRules(){
-  const el=document.getElementById("rulesContent");if(!el)return;const o=editor.objects.find(x=>x.id===editor.selected);if(!o){el.innerHTML=`<div class="small">Select an object, then click <b>+ Add rule</b>.</div>`;return;}
+  const box=document.getElementById("rulesContent");if(!box)return; const o=editor.objects.find(x=>x.id===editor.selected);
+  if(!o){box.innerHTML="Select an object to build rules.";return;}
   const rules=o.rules||[];
-  el.innerHTML=`<div class="notice" style="margin-bottom:8px">Type what you want naturally. MetGames converts it into a valid rule and keeps the structured command. Example: <b>when right arrow key is pressed, then player jumps</b></div><div style="display:flex;gap:7px;align-items:center"><input id="naturalRule" style="flex:1" placeholder="When right arrow key is pressed, then player jumps" onkeydown="if(event.key==='Enter'){event.preventDefault();addNaturalRule()}"><button class="btn primary" onclick="addNaturalRule()">+ Add rule</button></div><div id="ruleParseStatus" class="small" style="margin-top:6px"></div><div style="margin-top:10px">${rules.map((r,i)=>`<div class="rule"><span class="block when">${esc(r.whenLabel||r.when)}</span><span>→</span><span class="block do">${esc(r.doLabel||r.do)}</span>${r.value!==undefined?`<span class="tag">${esc(r.value)}</span>`:""}<button class="btn danger" onclick="removeRule(${i})">×</button></div>`).join("")||`<div class="small">No rules yet.</div>`}</div>`;
+  const when=[
+    ["game_start","Game starts"],["clicked","Object clicked"],["touch_player","Player touches object"],["touch_any","Touches another object"],["key_any","Any key pressed"],["key_left","Left key pressed"],["key_right","Right key pressed"],["key_up","Up key pressed"],["key_down","Down key pressed"],["key_space","Space pressed"],["touch_screen","Screen touched"],["timer","Timer reaches value"],["score_change","Score changes"],["speed_change","Speed changes"]
+  ];
+  const actions=[
+    ["move","Move"],["move_left","Move left"],["move_right","Move right"],["move_up","Move up"],["move_down","Move down"],["jump","Jump"],["turn","Turn"],["set_angle","Set angle"],["set_speed","Set speed"],["change_speed","Change speed"],["follow_touch","Move toward touch"],["follow_player","Follow player"],["change_x","Change X"],["change_y","Change Y"],["set_position","Set position"],["set_size","Set size"],["change_appearance","Change appearance"],["play_animation","Play animation"],["play_sound","Play sound"],["add_score","Add score"],["set_score","Set score"],["change_timer","Change timer"],["start_timer","Start timer"],["stop_timer","Stop timer"],["reset_timer","Reset timer"],["add_coins","Add coins"],["change_health","Change health"],["remove_health","Remove health"],["create_object","Create object"],["delete","Delete object"],["show_message","Show message"],["broadcast","Send message"]
+  ];
+  box.innerHTML=`<div class="rule-builder"><div class="form-row"><div><label>WHEN</label><select id="ruleWhen">${when.map(x=>`<option value="${x[0]}">${x[1]}</option>`).join("")}</select></div><div><label>DO</label><select id="ruleDo">${actions.map(x=>`<option value="${x[0]}">${x[1]}</option>`).join("")}</select></div></div><div class="form-row"><div><label>Value</label><input id="ruleValue" placeholder="10 / 45° / 200 px / 3 sec"></div><div><label>CONTROL</label><select id="ruleControl"><option value="none">None</option><option value="forever">Forever</option><option value="repeat">Repeat</option><option value="wait">Wait</option><option value="if">If</option><option value="if_else">If / Else</option><option value="until">Repeat until</option><option value="stop">Stop</option></select></div></div><button class="btn primary" onclick="addRule()">Add rule</button></div><div style="margin-top:14px">${rules.map((r,i)=>`<div class="rule-row"><span><b>WHEN</b> ${esc(r.whenLabel||r.when)} → <b>DO</b> ${esc(r.doLabel||r.do)}${r.value?` (${esc(r.value)})`:""}${r.control&&r.control!=="none"?` → ${esc(r.control)}`:""}</span><button class="btn" onclick="removeRule(${i})">Remove</button></div>`).join("")||`<div class="small">No rules yet.</div>`}</div><div class="small" style="margin-top:12px">Rules include touch, every keyboard key, speed, turning/angle, touch-to-move, collisions, score, timers, health, coins, messages, variables, animation, sound, create/delete and control loops.</div>`;
 }
-async function addNaturalRule(){
+function addRule(){
   const o=editor.objects.find(x=>x.id===editor.selected);if(!o)return;
-  const input=document.getElementById("naturalRule"),status=document.getElementById("ruleParseStatus"),command=input?.value.trim();if(!command)return;
-  status.textContent="Converting rule…";
-  try{
-    const {data,error}=await db.functions.invoke("metgames-rule-parser",{body:{command}});
-    if(error||data?.error)throw Error(data?.message||data?.error||error?.message||"Rule could not be understood.");
-    const r=data.rule;
-    o.rules=o.rules||[];o.rules.push({...r,source:command,whenLabel:r.display.split(" → ")[0].replace(/^WHEN /,"") ,doLabel:r.display.split(" → ")[1]?.replace(/^DO /,"")||r.do});
-    editor.dirty=true;input.value="";status.innerHTML=`<span style="color:#79e29a">✓ Correct rule:</span> ${esc(r.display)}`;renderRules();
-  }catch(e){
-    status.innerHTML=`<span style="color:#ff7777">✕ ${esc(e.message||"Rule not understood.")}</span><br><span>Try: when right arrow key is pressed, then player jumps</span>`;
-  }
+  const w=document.getElementById("ruleWhen"),d=document.getElementById("ruleDo"),v=document.getElementById("ruleValue"),c=document.getElementById("ruleControl");
+  const whenLabel=w.options[w.selectedIndex].text,doLabel=d.options[d.selectedIndex].text; o.rules=o.rules||[];o.rules.push({when:w.value,do:d.value,value:v.value.trim(),control:c.value,whenLabel,doLabel});editor.dirty=true;renderRules();
 }
-function addRule(){addNaturalRule();}
+function addDynamicAsset(kind){
+  const labels={score:"Score",timer:"Timer",stopwatch:"Stopwatch",health:"Health",coins:"Coins",speed:"Speed"};
+  editor.objects.push({id:crypto.randomUUID(),type:"dynamic",dynamicType:kind,label:labels[kind]||kind,x:25,y:25+editor.objects.filter(o=>o.type==="dynamic").length*35,width:180,height:30,color:"#ffffff",rules:[]});editor.dirty=true;renderObjectList();drawEditor();renderRules();
+}
 function removeRule(i){const o=editor.objects.find(x=>x.id===editor.selected);if(!o)return;o.rules.splice(i,1);editor.dirty=true;renderRules();}
 function openRulesPanel(){document.getElementById("rulesPanel")?.scrollIntoView({behavior:"smooth"});}
 function addTimelineKey(){const track=document.getElementById("timelineTrack");if(!track)return;const key=document.createElement("div");key.className="key";key.style.left=Math.min(95,Math.random()*90)+"%";track.appendChild(key);editor.dirty=true;toast("Timeline keyframe added.");}
@@ -1074,23 +1105,25 @@ function openRecovery(){const p=prompt("Set a recovery/import password for this 
 function toggleTestMode(){editor.testMode=!editor.testMode;toast(editor.testMode?"Test mode started.":"Test mode stopped.");if(editor.testMode)runRuntime(editor.objects,document.getElementById("gameCanvas"),true);}
 function runRuntime(objects,canvas,isEditor=false){
   if(!canvas)return;const ctx=canvas.getContext("2d"),scene=objects.map(o=>({...o,rules:(o.rules||[]).map(r=>({...r}) )}));let player=scene.find(o=>o.type==="player")||scene[0];let keys={},score=0,vy=0,last=performance.now(),raf=0,started=false;
-  const down=e=>{keys[e.key.toLowerCase()]=true;if(e.key===" ")keys.space=true},up=e=>{keys[e.key.toLowerCase()]=false;if(e.key===" ")keys.space=false};window.addEventListener("keydown",down);window.addEventListener("keyup",up);
-  canvas.onclick=()=>{scene.forEach(o=>(o.rules||[]).forEach(r=>{if(r.when==="clicked")applyRule(o,r)}))};
+  const down=e=>{keys[e.key.toLowerCase()]=true;if(e.key===" ")keys.space=true;scene.forEach(o=>(o.rules||[]).forEach(r=>{if(r.when==="key_any"||r.when==="key_"+e.key.toLowerCase())applyRule(o,r)}));},up=e=>{keys[e.key.toLowerCase()]=false;if(e.key===" ")keys.space=false};window.addEventListener("keydown",down);window.addEventListener("keyup",up);
+  let touchPoint=null;
+  const touchMove=e=>{const r=canvas.getBoundingClientRect();touchPoint={x:(e.clientX-r.left)*(canvas.width/r.width),y:(e.clientY-r.top)*(canvas.height/r.height)};scene.forEach(o=>(o.rules||[]).forEach(rule=>{if(rule.when==="touch_screen")applyRule(o,rule)}));};
+  canvas.onpointerdown=e=>{touchMove(e);scene.forEach(o=>(o.rules||[]).forEach(r=>{if(r.when==="clicked")applyRule(o,r)}));};canvas.onpointermove=e=>{if(e.buttons)touchMove(e)};canvas.onpointerup=()=>{touchPoint=null};
   function hit(a,b){return a&&b&&a.x<b.x+b.width&&a.x+a.width>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y}
   function targetObject(o,r){return r.target==="player"?player:o}
-  function applyRule(o,r){const t=targetObject(o,r);if(r.do==="move_right")t.x+=Number(r.value||2);if(r.do==="move_left")t.x-=Number(r.value||2);if(r.do==="jump"&&t===player&&player.y>=350)vy=-480;if(r.do==="add_score")score+=Number(r.value||10);if(r.do==="delete")o._deleted=true;if(r.do==="message")toast(String(r.value||"Rule message"))}
-  function loop(now){const dt=Math.min(.033,(now-last)/1000);last=now;if(!started){scene.forEach(o=>(o.rules||[]).forEach(r=>{if(r.when==="game_start")applyRule(o,r)}));started=true;}if(keys.arrowleft||keys.a)player.x-=220*dt;if(keys.arrowright||keys.d)player.x+=220*dt;if((keys.space||keys.arrowup||keys.w)&&player.y>=350)vy=-480;vy+=1000*dt;player.y+=vy*dt;if(player.y>350){player.y=350;vy=0}player.x=Math.max(0,Math.min(canvas.width-player.width,player.x));scene.forEach(o=>(o.rules||[]).forEach(r=>{if(r.when==="key_right"&&keys.arrowright)applyRule(o,r);if(r.when==="key_left"&&keys.arrowleft)applyRule(o,r);if(r.when==="key_space"&&keys.space)applyRule(o,r);if(r.when==="key_up"&&keys.arrowup)applyRule(o,r);if(r.when==="key_down"&&keys.arrowdown)applyRule(o,r);if(r.when==="touch_player"&&o!==player&&hit(player,o))applyRule(o,r)}));ctx.fillStyle=editor.advanced?"#08121a":"#101724";ctx.fillRect(0,0,canvas.width,canvas.height);scene.filter(o=>!o._deleted).forEach(o=>{ctx.fillStyle=o.color||"#fff";if(o.type==="coin"){ctx.beginPath();ctx.arc(o.x+o.width/2,o.y+o.height/2,o.width/2,0,Math.PI*2);ctx.fill()}else if(o.type==="text"){ctx.font="22px Arial";ctx.fillText(o.text||"",o.x,o.y+25)}else ctx.fillRect(o.x,o.y,o.width,o.height)});ctx.fillStyle="#fff";ctx.font="15px Arial";ctx.fillText(`Score: ${score}`,15,24);if(editor.testMode||!isEditor)raf=requestAnimationFrame(loop)}loop(performance.now());return()=>{cancelAnimationFrame(raf);window.removeEventListener("keydown",down);window.removeEventListener("keyup",up);canvas.onclick=null};}
+  function applyRule(o,r){const t=targetObject(o,r),v=Number(r.value||2);if(r.do==="move_right")t.x+=v;if(r.do==="move_left")t.x-=v;if(r.do==="move_up")t.y-=v;if(r.do==="move_down")t.y+=v;if(r.do==="move")t.x+=v;if(r.do==="jump"&&t===player&&player.y>=350)vy=-480;if(r.do==="turn")t.rotation=Number(t.rotation||0)+v;if(r.do==="set_angle")t.rotation=v;if(r.do==="set_speed")t.speed=v;if(r.do==="change_speed")t.speed=Number(t.speed||0)+v;if(r.do==="follow_touch"&&touchPoint){const dx=touchPoint.x-t.x,dy=touchPoint.y-t.y,len=Math.hypot(dx,dy)||1;t.x+=dx/len*v*0.016;t.y+=dy/len*v*0.016;}if(r.do==="add_score")score+=v;if(r.do==="set_score")score=v;if(r.do==="delete")o._deleted=true;if(r.do==="message"||r.do==="show_message")toast(String(r.value||"Rule message"))}
+  function loop(now){const dt=Math.min(.033,(now-last)/1000);last=now;if(!started){scene.forEach(o=>(o.rules||[]).forEach(r=>{if(r.when==="game_start")applyRule(o,r)}));started=true;}const moveSpeed=Number(player.speed||220); if((keys.arrowleft||keys.a)&&player.keyboardControl!=="none")player.x-=moveSpeed*dt;if((keys.arrowright||keys.d)&&player.keyboardControl!=="none")player.x+=moveSpeed*dt;if((keys.arrowup||keys.w)&&player.keyboardControl!=="none")player.y-=moveSpeed*dt;if((keys.arrowdown||keys.s)&&player.keyboardControl!=="none")player.y+=moveSpeed*dt;if((keys.space)&&player.y>=350)vy=-480;if(player.touchMove&&touchPoint){const dx=touchPoint.x-(player.x+player.width/2),dy=touchPoint.y-(player.y+player.height/2),len=Math.hypot(dx,dy)||1;player.x+=dx/len*moveSpeed*dt;player.y+=dy/len*moveSpeed*dt;}vy+=1000*dt;player.y+=vy*dt;if(player.y>350){player.y=350;vy=0}player.x=Math.max(0,Math.min(canvas.width-player.width,player.x));scene.forEach(o=>(o.rules||[]).forEach(r=>{if(r.when==="key_right"&&keys.arrowright)applyRule(o,r);if(r.when==="key_left"&&keys.arrowleft)applyRule(o,r);if(r.when==="key_space"&&keys.space)applyRule(o,r);if(r.when==="key_up"&&keys.arrowup)applyRule(o,r);if(r.when==="key_down"&&keys.arrowdown)applyRule(o,r);if(r.when==="touch_player"&&o!==player&&hit(player,o))applyRule(o,r)}));ctx.fillStyle=editor.advanced?"#08121a":"#101724";ctx.fillRect(0,0,canvas.width,canvas.height);scene.filter(o=>!o._deleted).forEach(o=>{ctx.fillStyle=o.color||"#fff";if(o.type==="coin"){ctx.beginPath();ctx.arc(o.x+o.width/2,o.y+o.height/2,o.width/2,0,Math.PI*2);ctx.fill()}else if(o.type==="text"){ctx.font="22px Arial";ctx.fillText(o.text||"",o.x,o.y+25)}else if(o.type==="dynamic"){ctx.font="16px Arial";ctx.fillStyle="#ffffff";ctx.fillText(`${o.label||o.dynamicType}: ${o.dynamicType==="timer"||o.dynamicType==="stopwatch"?"00:00":o.dynamicType==="score"?"0":o.dynamicType==="speed"?"0":"100"}`,o.x,o.y+21)}else ctx.fillRect(o.x,o.y,o.width,o.height)});ctx.fillStyle="#fff";ctx.font="15px Arial";ctx.fillText(`Score: ${score}`,15,24);if(editor.testMode||!isEditor)raf=requestAnimationFrame(loop)}loop(performance.now());return()=>{cancelAnimationFrame(raf);window.removeEventListener("keydown",down);window.removeEventListener("keyup",up);canvas.onclick=null};}
 function openAdvancedStudio(){if(!isStudio()){openPlans();return;}const gameType=confirm("Advanced Studio will create a 3D project. Continue?");if(!gameType)return;openGameCreate("3d");}
 function openAdvancedTools(){toast("Advanced tools: camera, lighting, physics, animation, Blox and MEX AI are available in this workspace.");const panel=document.getElementById("properties");if(panel)panel.insertAdjacentHTML("beforeend",`<div class="notice ok" style="margin-top:12px"><b>Advanced tools</b><br>Camera: orbit/zoom<br>Lighting: scene lights<br>Physics: gravity/collisions<br>Animation: keyframes<br>Blox: visual code<br>MEX AI: idea/rule assistant</div><button class="btn" style="margin-top:8px" onclick="mexAI()">Ask MEX AI</button>`);}
-async function mexAI(){if(!isStudio()){openPlans();return;}const q=prompt("Tell MEX AI what you want your game to do:");if(!q)return;toast("MEX AI is thinking…");try{const {data,error}=await db.functions.invoke("mex-ai",{body:{message:q,context:{game:editor.game?.title,objects:editor.objects}}});if(error)throw Error(error.message);if(data?.error)throw Error(data.error);openGeneric(`<div class="head"><div><h2>MEX AI</h2><p>Advanced Studio assistant</p></div><button class="btn" onclick="closeGeneric()">Close</button></div><div class="notice ok" style="white-space:pre-wrap">${esc(data?.reply||"MEX AI returned no text.")}</div>`);}catch(x){toast(x.message||"MEX AI is not configured yet on the server.","bad");}}
+async function mexAI(){if(!isStudio()){openPlans();return;}const q=prompt("Tell MEX AI what you want your game to do:");if(!q)return;toast("MEX AI is thinking…");try{const {data,error}=await db.functions.invoke("mex-ai",{body:{message:q,context:{game:editor.game?.title,objects:editor.objects}}});if(error)throw Error(error.message);if(data?.error)throw Error(data.error);openGeneric(`<div class="head"><div><h2>MEX AI</h2><p>Advanced Studio assistant</p></div><button class="btn" onclick="closeGeneric()">Close</button></div><div class="notice ok" style="white-space:pre-wrap">${esc(data?.reply||"MEX AI returned no text.")}</div>`);}catch(x){toast("MEX AI is unavailable right now. Please try again later.","bad");}}
 async function renderGame(gameId){
-  const {data:game,error}=await db.from("games").select("id,title,description,game_type,maturity_rating,owner_id,published_at,creator_name_snapshot,pay_to_play,play_price,play_currency").eq("id",gameId).eq("status","published").single();
+  const {data:game,error}=await db.from("games").select("id,title,description,game_type,maturity_rating,owner_id,published_at,creator_name_snapshot,pay_to_play,play_price,play_currency,chat_enabled").eq("id",gameId).eq("status","published").single();
   if(error){setApp(`<div class="empty">Game not found or not published.</div>`);return;}
   const {data:version,error:ve}=await db.from("game_versions").select("*").eq("game_id",gameId).eq("status","published").order("version_number",{ascending:false}).limit(1).maybeSingle();
   if(ve||!version){setApp(`<div class="empty">Published game build is unavailable.</div>`);return;}
-  const {data:creator}=await db.from("profiles").select("username,display_name,creator_rating,followers_count").eq("id",game.owner_id).maybeSingle();
+  const {data:creator}=await db.from("profiles").select("username,display_name,avatar_url,creator_rating,followers_count").eq("id",game.owner_id).maybeSingle();
   const priceLabel=game.pay_to_play?`Pay ${Number(game.play_price).toLocaleString()} ${esc(game.play_currency)} once via METPAY`:`Free to play`;
-  setApp(`<div class="player-shell"><div class="player-top"><button class="btn" onclick="navigate('play')">← Back</button><div class="status">METGAMES RUNTIME</div></div><canvas id="playCanvas" width="900" height="506"></canvas><div class="play-info"><h1>${esc(game.title)}</h1><p class="small">${esc(game.description||"No description")}</p><div class="meta"><span class="tag">${esc(game.game_type.toUpperCase())}</span><span class="tag">${esc(game.maturity_rating)}</span><span class="tag">@${esc(creator?.username||game.creator_name_snapshot||"creator")}</span><span class="tag">${priceLabel}</span></div><div id="gameAccessPanel"></div><div class="rating-row">${[1,2,3,4,5].map(n=>`<button class="star" onclick="rateGame('${game.id}',${n})">★</button>`).join("")}</div></div></div>`);
+  setApp(`<div class="player-shell"><div class="player-top"><button class="btn" onclick="navigate('play')">← Back</button><div class="status">METGAMES RUNTIME</div></div><canvas id="playCanvas" width="900" height="506"></canvas><div class="play-info"><h1>${esc(game.title)}</h1><p class="small">${esc(game.description||"No description")}</p><div class="meta"><span class="tag">${esc(game.game_type.toUpperCase())}</span><span class="tag">${esc(game.maturity_rating)}</span><span class="tag creator-chip">${creator?.avatar_url?`<img src="${esc(creator.avatar_url)}" alt="">`:esc((creator?.username||"C")[0].toUpperCase())} @${esc(creator?.username||game.creator_name_snapshot||"creator")}</span><span class="tag">${priceLabel}</span></div><div id="gameAccessPanel"></div>${game.chat_enabled && ["13+","16+","18+"].includes(game.maturity_rating) ? `<div class="game-chat" id="gameChat"><div class="chat-head"><b>Game Chat</b><span class="small">Messages are checked by METGAMES moderation.</span></div><div id="chatMessages" class="chat-messages"></div><div class="chat-compose"><input id="chatInput" maxlength="300" placeholder="Write a message…"><button class="btn primary" onclick="sendGameChat('${game.id}')">Send</button></div></div>` : ""}<div class="rating-row">${[1,2,3,4,5].map(n=>`<button class="star" onclick="rateGame('${game.id}',${n})">★</button>`).join("")}</div></div></div>`);
   if(!currentUser){
     const c=document.getElementById("playCanvas"),x=c.getContext("2d");x.fillStyle="#101724";x.fillRect(0,0,c.width,c.height);x.fillStyle="#fff";x.font="bold 28px Arial";x.textAlign="center";x.fillText("Login required to play",c.width/2,c.height/2);x.font="16px Arial";x.fillStyle="#9aa7b9";x.fillText("Click Login to start.",c.width/2,c.height/2+35);c.onclick=openAuth;return;
   }
@@ -1108,12 +1141,20 @@ async function renderGame(gameId){
     }
   }
   if(!access)return;
+  if(game.chat_enabled && ["13+","16+","18+"].includes(game.maturity_rating)) loadGameChat(game.id);
 
   const {data:q,error:qe}=await db.rpc("increment_game_launch",{p_game_id:game.id});
   if(qe){toast("Launch tracking is unavailable; starting the game anyway.","warn");}
   else{const r=Array.isArray(q)?q[0]:q;if(r?.ok===false){toast(r.reason==="LIMIT_EXCEEDED"?`Daily play limit reached (${r.limit_count}).`:`Unable to start: ${r.reason||"unknown"}`,"bad");return;}}
   runRuntime(version.asset_manifest?.objects||[],document.getElementById("playCanvas"),false);
 }
+async function loadGameChat(gameId){
+  const box=document.getElementById("chatMessages"); if(!box)return; box.innerHTML='<div class="small">Loading chat…</div>';
+  try{const {data,error}=await db.functions.invoke("metgames-chat",{body:{action:"recent",gameId}});if(error)throw error;if(data?.error)throw Error(data.error);const rows=data?.messages||[];box.innerHTML=rows.map(m=>`<div class="chat-msg"><span class="chat-user">${esc(m.sender_id===currentUser?.id?"You":"Player")}</span><span>${esc(m.filtered_body||m.body||"")}</span></div>`).join("")||'<div class="small">No messages yet.</div>';box.scrollTop=box.scrollHeight;}catch(e){console.warn(e);box.innerHTML='<div class="small">Chat is unavailable right now.</div>';}}
+async function sendGameChat(gameId){
+  const input=document.getElementById("chatInput");const message=input?.value.trim();if(!message)return;
+  try{const {data,error}=await db.functions.invoke("metgames-chat",{body:{action:"send",gameId,message}});if(error)throw error;if(data?.banned){toast(data.message||"Chat access is temporarily restricted.","bad");if(input)input.disabled=true;return;}if(data?.error)throw Error(data.error);if(input)input.value="";loadGameChat(gameId);}catch(e){console.warn(e);toast("Chat is unavailable right now. The game can still be played.","bad");}}
+
 function showGamePaywall(game,message=""){
   const panel=document.getElementById("gameAccessPanel");
   if(!panel)return;
@@ -1179,7 +1220,7 @@ async function createAdNow(){
     if(error)throw Error(error.message);if(data?.error)throw Error(data.error);const id=data?.data?.id||data?.data?.ad_id||data?.id;if(!id)throw Error("No advertisement ID returned.");
     const pub=await db.functions.invoke("metgames-media",{body:{action:"publish_ad",adId:id}});if(pub.error)throw Error(pub.error.message);if(pub.data?.error)throw Error(pub.data.error);
     status.className="notice ok";status.textContent="Advertisement published.";toast("Advertisement published.","ok");
-  }catch(x){status.className="notice bad";status.textContent=x.message||"Advertisement failed.";}
+  }catch(x){status.className="notice bad";status.textContent="Advertisement creation is unavailable right now. Please try again later.";}
 }
 
 async function uploadProfilePhoto(){
@@ -1192,7 +1233,8 @@ async function uploadProfilePhoto(){
   try{
     const ext=(file.name.split(".").pop()||"jpg").toLowerCase().replace(/[^a-z0-9]/g,"")||"jpg";
     const path=`${currentUser.id}/avatar.${ext}`;
-    const {error}=await db.storage.from("avatars").upload(path,file,{upsert:true,contentType:file.type,cacheControl:"3600"});
+    await db.storage.from("avatars").remove([path]).catch(()=>{});
+    const {error}=await db.storage.from("avatars").upload(path,file,{upsert:false,contentType:file.type,cacheControl:"3600"});
     if(error)throw error;
     const {data:urlData}=db.storage.from("avatars").getPublicUrl(path);
     const avatarUrl=`${urlData.publicUrl}?v=${Date.now()}`;
@@ -1201,7 +1243,7 @@ async function uploadProfilePhoto(){
     await refreshUser();
     toast("Profile photo updated.","ok");
     renderProfile();
-  }catch(e){console.error(e);toast(e.message||"Could not upload profile photo.","bad");}
+  }catch(e){console.error(e);toast("Profile photo upload is unavailable right now. Your account is unchanged.","bad");}
 }
 
 async function createProfileStatus(){
@@ -1223,7 +1265,7 @@ async function createProfileStatus(){
     const cap=document.getElementById("statusCaption");if(cap)cap.value="";
     toast("Status posted.","ok");
     renderProfile();
-  }catch(e){console.error(e);toast(e.message||"Could not post status.","bad");}
+  }catch(e){console.error(e);toast("Status photo upload is unavailable right now.","bad");}
 }
 
 async function deleteProfileStatus(id){
