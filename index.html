@@ -823,7 +823,7 @@ const PLANS={
 };
 const PUBLIC_BUCKET="metgames-public";
 
-function allowMetVerse(){document.getElementById('policyModal')?.classList.remove('open');toast('MetVerse policies accepted for this visit.','ok');}
+function allowMetVerse(){document.getElementById('policyModal')?.classList.remove('open');toast('MetVerse policies accepted for this visit.','ok');navigate('home');}
 function showPolicies(){document.getElementById('policyModal')?.classList.add('open');}
 
 function populateCountrySelects(){
@@ -1035,12 +1035,24 @@ async function uploadPublic(file,folder){
   return path;
 }
 async function invokeAuthenticatedFunction(name,body){
-  let {data:sessionData}=await db.auth.getSession();
-  let session=sessionData?.session;
-  const refreshed=await db.auth.refreshSession();
-  session=refreshed.data?.session||session;
+  let {data:sessionData,error:sessionError}=await db.auth.getSession();
+  if(sessionError)throw Error('LOGIN_REQUIRED');
+  let session=sessionData?.session||null;
+  const expiresAt=Number(session?.expires_at||0);
+  if(!session?.access_token || (expiresAt && expiresAt*1000 < Date.now()+60000)){
+    const refreshed=await db.auth.refreshSession();
+    if(refreshed.error)throw Error('LOGIN_REQUIRED');
+    session=refreshed.data?.session||null;
+  }
   if(!session?.access_token)throw Error('LOGIN_REQUIRED');
-  return db.functions.invoke(name,{body,headers:{Authorization:`Bearer ${session.access_token}`}});
+  const response=await fetch(`${SUPABASE_URL}/functions/v1/${encodeURIComponent(name)}`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':`Bearer ${session.access_token}`},
+    body:JSON.stringify(body)
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)return {data,error:{message:data?.error||data?.message||`HTTP ${response.status}`,context:response}};
+  return {data,error:null};
 }
 
 async function createTrailerNow(){
@@ -1550,7 +1562,7 @@ function openGeneric(html){document.getElementById("genericModalBox").innerHTML=
 function closeGeneric(){document.getElementById("genericModal").classList.remove("open");document.getElementById("genericModalBox").innerHTML="";}
 function friendlyError(message){
   const m=String(message||"");
-  const map={LOGIN_REQUIRED:"Please log in first.",AUTH_REQUIRED:"Please log in first.",CREATOR_ENTITLEMENT_MISSING:"Your creator workspace is not ready yet. Refresh your account and try again.",WEEKLY_GAME_LIMIT:"Free Creator allows up to 5 new games each week.",INVALID_GAME_TYPE:"Choose either 2D or 3D.",INVALID_MATURITY_RATING:"Choose a valid maturity rating.",CHAT_NOT_AVAILABLE:"Chat requires a 13+ account and a 13+ maturity rating for the game.",NOT_OWNER:"You can only change your own game.",GAME_ALREADY_PUBLISHED:"Unpublish the game before changing its type.",INVALID_RESPONSE_CHOICE:"Choose Yes, No, or Later.",REVIEW_NOT_FOUND:"That review could not be found.",MISSING_TITLE:"Enter a game name first.",INVALID_PLAY_PRICE:"Enter a valid pay-to-play price.",UNSUPPORTED_PLAY_CURRENCY:"Choose a supported currency.",TRAILER_SUBSCRIPTION_REQUIRED:"Trailer creation requires Pro or Ultra.",TRAILER_VIDEO_REQUIRED:"Choose a trailer video.",TRAILER_GAME_NOT_FOUND:"That game name could not be found in your creator account. Type the name of one of your games.",TRAILER_GAME_REQUIRED:"Enter the game name first.",TRAILER_IMAGES_REQUIRED:"Choose at least one trailer image.",TRAILER_MAX_60_SECONDS:"Trailer media must be 1–60 seconds.",ADS_GOLD_REQUIRED:"Ad creation requires Ultra.",AD_VIDEO_REQUIRED:"Choose an ad video.",AD_IMAGES_REQUIRED:"Choose at least one ad image.",AD_MAX_60_SECONDS:"Ad media must be 1–60 seconds.",CHAT_NOT_ENABLED:"Chat is not enabled for this game.",CHAT_AGE_REQUIRED:"Chat is available for 13+ accounts.",CHAT_TARGET_AGE_REQUIRED:"Direct chat is available when both accounts are 13+.",UPLOAD_FAILED:"The file could not be uploaded. Check the file type/size and try again.",STORAGE_LIMIT_REACHED:"You have reached your plan storage limit. Delete some files or upgrade your plan."};
+  const map={LOGIN_REQUIRED:"Your MetVerse session could not be verified. Please refresh the page and try again.",AUTH_REQUIRED:"Please log in first.",CREATOR_ENTITLEMENT_MISSING:"Your creator workspace is not ready yet. Refresh your account and try again.",WEEKLY_GAME_LIMIT:"Free Creator allows up to 5 new games each week.",INVALID_GAME_TYPE:"Choose either 2D or 3D.",INVALID_MATURITY_RATING:"Choose a valid maturity rating.",CHAT_NOT_AVAILABLE:"Chat requires a 13+ account and a 13+ maturity rating for the game.",NOT_OWNER:"You can only change your own game.",GAME_ALREADY_PUBLISHED:"Unpublish the game before changing its type.",INVALID_RESPONSE_CHOICE:"Choose Yes, No, or Later.",REVIEW_NOT_FOUND:"That review could not be found.",MISSING_TITLE:"Enter a game name first.",INVALID_PLAY_PRICE:"Enter a valid pay-to-play price.",UNSUPPORTED_PLAY_CURRENCY:"Choose a supported currency.",TRAILER_SUBSCRIPTION_REQUIRED:"Trailer creation requires Pro or Ultra.",TRAILER_VIDEO_REQUIRED:"Choose a trailer video.",TRAILER_GAME_NOT_FOUND:"That game name could not be found in your creator account. Type the name of one of your games.",TRAILER_GAME_REQUIRED:"Enter the game name first.",TRAILER_IMAGES_REQUIRED:"Choose at least one trailer image.",TRAILER_MAX_60_SECONDS:"Trailer media must be 1–60 seconds.",ADS_GOLD_REQUIRED:"Ad creation requires Ultra.",AD_VIDEO_REQUIRED:"Choose an ad video.",AD_IMAGES_REQUIRED:"Choose at least one ad image.",AD_MAX_60_SECONDS:"Ad media must be 1–60 seconds.",CHAT_NOT_ENABLED:"Chat is not enabled for this game.",CHAT_AGE_REQUIRED:"Chat is available for 13+ accounts.",CHAT_TARGET_AGE_REQUIRED:"Direct chat is available when both accounts are 13+.",UPLOAD_FAILED:"The file could not be uploaded. Check the file type/size and try again.",STORAGE_LIMIT_REACHED:"You have reached your plan storage limit. Delete some files or upgrade your plan."};
   for(const [code,msg] of Object.entries(map))if(m.includes(code))return msg;
   if(/Edge Function returned a non-2xx|non-2xx/i.test(m))return "The server could not complete that request. Please try again.";
   return m||"The request could not be completed.";
