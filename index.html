@@ -685,6 +685,41 @@ footer a{
 @media(orientation:portrait) and (max-width:700px){body:before{content:"Rotate your phone to landscape for the full MetVerse creator workspace.";position:fixed;left:0;right:0;bottom:0;z-index:10000;padding:9px 12px;text-align:center;background:#111a2a;color:#dce7ff;font-size:12px;border-top:1px solid #2d3c59}}
 
 .game-chat{margin-top:16px;border:1px solid var(--line);border-radius:14px;background:#0a0f18;padding:12px}.chat-head{display:flex;justify-content:space-between;gap:10px;align-items:center}.chat-messages{height:180px;overflow:auto;margin:10px 0;padding:8px;border-radius:10px;background:#070b12}.chat-msg{padding:6px 8px;border-bottom:1px solid #182236}.chat-user{font-weight:800;margin-right:8px}.chat-compose{display:flex;gap:8px}.chat-compose input{flex:1}
+
+/* MetVerse phone + landscape performance layout */
+@media(max-width:900px){
+  html,body{width:100%;max-width:100%;overflow-x:hidden}
+  body{font-size:13px}
+  header{gap:6px;padding:6px 8px;min-height:58px}
+  .brand img{width:82px!important;height:auto}.brand{font-size:13px;min-width:auto!important}
+  nav{gap:3px!important;scrollbar-width:none}nav::-webkit-scrollbar{display:none}
+  nav button,.account button,.upgrade-chip{font-size:11px!important;padding:6px 8px!important;white-space:nowrap}
+  .account{gap:4px!important}.header-avatar{width:26px;height:26px;flex-basis:26px}
+  #app{padding:12px 9px 40px!important}
+  h1{font-size:clamp(28px,7vw,48px)}h2{font-size:20px}h3{font-size:15px}
+  p,.small,.notice,.meta,.tag,.choice p,.plan-list{font-size:11px!important}
+  .btn{font-size:11px!important;padding:7px 9px!important}
+  .section-title{gap:8px;margin:12px 0 8px}
+  .section-title span{font-size:10px}
+  .card-body,.media-card,.choice,.plan-card{padding:11px}
+  .grid,.media-grid,.creator-choice,.plan-grid{gap:9px}
+  .thumbnail{min-height:120px}
+  .modal-box{max-width:calc(100vw - 14px)!important;padding:13px!important}
+  .form input,.form textarea,.form select,.input{font-size:12px!important;padding:8px!important;max-width:100%}
+  .studio-shell{border-radius:10px}.studio-bar{padding:7px}.studio-side{padding:9px}.studio-center{padding:8px}
+  .studio-grid{min-height:0}.studio-canvas{max-width:100%;touch-action:none}
+  .tool-grid{gap:5px}.tool-grid button{font-size:10px;padding:6px}
+  .timeline-track{height:38px}.key{top:11px}
+  .rule{gap:4px}.block{font-size:9px;padding:5px 6px}
+}
+@media(min-width:701px) and (max-width:1000px) and (orientation:landscape){
+  header{flex-wrap:nowrap;min-height:56px}
+  nav{order:0;flex:1;min-width:0;width:auto;overflow-x:auto}
+  .account{margin-left:0}.studio-grid{grid-template-columns:175px minmax(0,1fr) 190px}
+  .studio-side{border-right:1px solid var(--line)!important;border-bottom:0!important}.studio-side.right{border-left:1px solid var(--line)!important;border-bottom:0!important}
+  .studio-center{min-width:0}.studio-canvas{max-height:55vh;object-fit:contain}
+}
+@media(orientation:portrait) and (max-width:700px){body:before{display:none!important}}
 </style>
 </head>
 
@@ -749,7 +784,7 @@ footer a{
 
 <!-- PLANS -->
 <div class="modal" id="plansModal"><div class="modal-box" style="width:min(1050px,100%)">
-  <div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><div><h2 style="margin:0">MetVerse Studio</h2><div class="small">Subscriptions use the fictional METXON Jurassic Points (JP) economy.</div></div><button class="btn" onclick="closePlans()">Close</button></div>
+  <div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><div><h2 style="margin:0">MetVerse Studio</h2><div class="small">Subscriptions use the fictional METXON Jurassic Points (JP) economy. For this prototype, ₹500 / ₹2,000 / ₹5,000 becomes 50 / 200 / 500 JP at 1 JP = ₹10.</div></div><button class="btn" onclick="closePlans()">Close</button></div>
   <div id="plansNotice" class="notice" style="margin:15px 0">Loading plans…</div>
   <div id="plansGrid" class="plan-grid"></div>
 </div></div>
@@ -761,6 +796,7 @@ footer a{
     <input type="hidden" id="newGameType" value="2d">
     <div><label>Game name</label><input id="newGameTitle" maxlength="120" required placeholder="Block Breaker"></div>
     <div><label>Description</label><textarea id="newGameDescription" maxlength="2000" placeholder="What is your game about?"></textarea></div>
+    <div><label>Game thumbnail <span class="small">(optional)</span></label><input id="newGameThumbnail" type="file" accept="image/*"><div class="small" style="margin-top:5px">This image becomes your game's identity in Play and Explore.</div></div>
     <div class="form-row"><div><label>Creator workspace</label><select id="newGameWorkspace" onchange="syncCreateWorkspace()"><option value="free">Free Creator</option><option value="advanced">Advanced Studio</option></select></div><div><label>Game type</label><select id="newGameTypeSelect" onchange="syncCreateGameType()"><option value="2d">2D</option><option value="3d">3D</option></select><input type="hidden" id="newGameType" value="2d"></div></div><div class="form-row"><div><label>Maturity rating</label><select id="newGameMaturity"><option value="all">All</option><option value="7+">7+</option><option value="12+">12+</option><option value="13+">13+</option><option value="16+">16+</option><option value="18+">18+</option></select></div><div class="notice" style="margin:0">Advanced Studio supports both 2D and 3D. Free Creator is 2D.</div></div>
     <div id="chatOptionWrap" class="notice" style="display:none"><label style="display:flex;align-items:center;gap:10px;cursor:pointer"><input id="newGameChat" type="checkbox"> Enable game chat</label><div class="small" style="margin-top:6px">Chat is available for 13+ creator accounts when the game is rated 13+ or higher. Messages are checked server-side.</div></div>
     <div class="notice"><b>Pay to play</b><br>Default: No. If enabled, players pay once through METPAY before they can play the published game. METPAY settlement uses the fictional METXON JP ledger; this prototype does not connect to cards or bank payments.</div>
@@ -817,9 +853,9 @@ const AGE_MAP={"8–12":"8_12","13–15":"13_15","16–18":"16_18","18+":"18_plu
 const COUNTRIES=["Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan", "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi", "Cabo Verde", "Cambodia", "Cameroon", "Canada", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo", "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czechia", "Denmark", "Djibouti", "Dominica", "Dominican Republic", "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia", "Fiji", "Finland", "France", "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana", "Haiti", "Honduras", "Hungary", "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy", "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kiribati", "Kuwait", "Kyrgyzstan", "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg", "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar", "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Korea", "North Macedonia", "Norway", "Oman", "Pakistan", "Palau", "Palestine", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal", "Qatar", "Romania", "Russia", "Rwanda", "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino", "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Korea", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland", "Syria", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey", "Turkmenistan", "Tuvalu", "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay", "Uzbekistan", "Vanuatu", "Vatican City", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe", "Kosovo", "Taiwan", "Western Sahara", "Cook Islands", "Niue", "Hong Kong", "Macao"];
 const PLANS={
   free:{name:"Free",jp:0,storage:"5 GB",storageBytes:5*1024*1024*1024,studio:false,trailer:false,ads:false},
-  base:{name:"Base",jp:500,storage:"10 GB",storageBytes:10*1024*1024*1024,studio:true,trailer:false,ads:false},
-  silver:{name:"Pro",jp:2000,storage:"15 GB",storageBytes:15*1024*1024*1024,studio:true,trailer:true,ads:false},
-  gold:{name:"Ultra",jp:5000,storage:"25 GB",storageBytes:25*1024*1024*1024,studio:true,trailer:true,ads:true}
+  base:{name:"Base",jp:50,storage:"10 GB",storageBytes:10*1024*1024*1024,studio:true,trailer:false,ads:false},
+  silver:{name:"Pro",jp:200,storage:"15 GB",storageBytes:15*1024*1024*1024,studio:true,trailer:true,ads:false},
+  gold:{name:"Ultra",jp:500,storage:"25 GB",storageBytes:25*1024*1024*1024,studio:true,trailer:true,ads:true}
 };
 const PUBLIC_BUCKET="metgames-public";
 
@@ -851,7 +887,7 @@ function canAds(){return currentEntitlement?.plan_id==="gold"&&isStudio();}
 
 async function transition(){
   const t=document.getElementById("transition");t.classList.add("show");t.classList.remove("reveal");
-  await sleep(250);t.classList.add("reveal");await sleep(420);t.classList.remove("show","reveal");
+  await sleep(70);t.classList.add("reveal");await sleep(110);t.classList.remove("show","reveal");
 }
 async function refreshUser(){
   const {data}=await db.auth.getUser();
@@ -915,8 +951,18 @@ async function navigate(page,opt={}){
 }
 
 async function renderSearch(){
-  setApp(`<div class="section-title"><h2>Search</h2><span>Find players and creators</span></div><div class="search-box"><input id="peopleSearch" class="input" placeholder="Search username or display name…" autocomplete="off"><button class="btn primary" onclick="runPeopleSearch()">Search</button></div><div id="peopleResults" class="grid" style="margin-top:18px"><div class="empty">Type a username or creator name to search.</div></div>`);
+  setApp(`<div class="section-title"><h2>Search</h2><span>Find players, creators and games</span></div><div class="search-box"><input id="peopleSearch" class="input" placeholder="Search creators or usernames…" autocomplete="off"><button class="btn primary" onclick="runPeopleSearch()">Search</button></div><div id="peopleResults" class="grid" style="margin-top:18px"><div class="empty">Search above or explore below.</div></div><section style="margin-top:28px"><div class="section-title"><h2>Explore Creators</h2><span>Creators building games in MetVerse</span></div><div id="exploreCreators" class="grid"><div class="empty">Loading creators…</div></div></section><section style="margin-top:28px"><div class="section-title"><h2>Explore Games</h2><span>Published games</span></div><div id="exploreSearchGames" class="grid"><div class="empty">Loading games…</div></div></section>`);
   const input=document.getElementById("peopleSearch");input?.addEventListener("keydown",e=>{if(e.key==="Enter")runPeopleSearch();});
+  loadSearchExplore();
+}
+async function loadSearchExplore(){
+  const c=document.getElementById("exploreCreators"),g=document.getElementById("exploreSearchGames");
+  const gm=await db.from("games").select("id,title,description,game_type,maturity_rating,owner_id,thumbnail_path,pay_to_play,play_price,play_currency").eq("status","published").order("published_at",{ascending:false}).limit(24);
+  const games=gm.data||[];
+  const creatorIds=[...new Set(games.map(x=>x.owner_id).filter(Boolean))];
+  const cr=creatorIds.length?await db.from("profiles").select("id,username,display_name,avatar_url,creator_rating,followers_count").in("id",creatorIds).order("followers_count",{ascending:false}).limit(12):{data:[]};
+  if(c)c.innerHTML=(cr.data||[]).map(p=>`<article class="card" style="cursor:pointer" onclick="openUserProfile('${p.id}')"><div class="card-body" style="text-align:center"><div class="avatar small-avatar" style="margin:0 auto 8px">${p.avatar_url?`<img src="${esc(p.avatar_url)}" loading="lazy" alt="">`:esc((p.username||"U")[0].toUpperCase())}</div><b>${esc(p.display_name||p.username)}</b><div class="small">@${esc(p.username)}</div></div></article>`).join("")||'<div class="empty">No game creators yet.</div>';
+  if(g)g.innerHTML=games.map(x=>`<article class="card"><div class="thumbnail">${x.thumbnail_path?`<img src="${esc(x.thumbnail_path)}" loading="lazy" style="width:100%;height:100%;object-fit:cover">`:esc(x.game_type.toUpperCase())}</div><div class="card-body"><h3>${esc(x.title)}</h3><div class="meta"><span class="tag">${esc(x.game_type.toUpperCase())}</span><span class="tag">${esc(x.maturity_rating)}</span></div><button class="btn primary full" style="margin-top:9px" onclick="navigate('game',{gameId:'${x.id}'})">Play</button></div></article>`).join("")||'<div class="empty">No published games yet.</div>';
 }
 async function runPeopleSearch(){
   const q=document.getElementById("peopleSearch")?.value.trim(),out=document.getElementById("peopleResults");if(!out)return;
@@ -995,20 +1041,36 @@ async function renderHome(){
   <div class="section-title"><h2>Our Trailers</h2><span>Upcoming and released game trailers</span></div><div id="homeTrailers" class="grid"><div class="empty">Loading trailers…</div></div>
   <div class="section-title"><h2>Ads</h2><span>Creator advertisements</span></div><div id="homeAds" class="grid"><div class="empty">Loading ads…</div></div>
   <div class="section-title"><h2>Explore More</h2><span>Games from Pro and Ultra creators as a thank-you for supporting creators</span></div><div id="exploreMoreGames" class="grid"><div class="empty">Loading Explore More…</div></div>`);
-  await loadGameCards('featuredGames',8);await loadHomeTrailers();await loadHomeAds();await loadExploreMoreGames();
+  await Promise.all([loadGameCards('featuredGames',8),loadHomeTrailers(),loadHomeAds(),loadExploreMoreGames()]);
 }
 async function loadHomeTrailers(){const el=document.getElementById('homeTrailers');if(!el)return;const {data,error}=await db.from('trailers').select('id,game_id,storage_path,duration_seconds,media_mode,trailer_title,short_description,status,games(title,status)').eq('status','published').order('created_at',{ascending:false}).limit(6);if(error){el.innerHTML='<div class="empty">Trailers could not be loaded right now.</div>';return;}el.innerHTML=(data||[]).map(t=>{const u=t.storage_path?db.storage.from(PUBLIC_BUCKET).getPublicUrl(t.storage_path).data.publicUrl:null;return `<article class="card"><div class="thumbnail">${u?`<video class="video-preview" controls src="${esc(u)}"></video>`:'TRAILER'}</div><div class="card-body"><h3>${esc(t.trailer_title||t.games?.title||'Trailer')}</h3><p>${esc(t.short_description||'')}</p><span class="tag">${t.games?.status==='published'?'Released':'Upcoming'}</span></div></article>`}).join('')||'<div class="empty">No published trailers yet.</div>';}
 async function loadHomeAds(){const el=document.getElementById('homeAds');if(!el)return;const {data,error}=await db.from('ads').select('id,media_mode,video_path,image_manifest,duration_seconds,target_game_category,target_game_type,target_platform,age_rating,creator_name,status').eq('status','published').order('created_at',{ascending:false}).limit(6);if(error){el.innerHTML='<div class="empty">Ads could not be loaded right now.</div>';return;}el.innerHTML=(data||[]).map(a=>{const u=a.video_path?db.storage.from(PUBLIC_BUCKET).getPublicUrl(a.video_path).data.publicUrl:null;return `<article class="card"><div class="thumbnail">${u?`<video class="video-preview" controls src="${esc(u)}"></video>`:'AD'}</div><div class="card-body"><h3>${esc(a.creator_name||'Creator')} Ad</h3><div class="meta"><span class="tag">${esc(a.target_game_category||'Any')}</span><span class="tag">${esc(a.target_game_type||'Any')}</span><span class="tag">${esc(a.target_platform||'Any')}</span></div></div></article>`}).join('')||'<div class="empty">No published ads yet.</div>';}
-async function loadExploreMoreGames(){const el=document.getElementById('exploreMoreGames');if(!el)return;const {data:games,error}=await db.from('games').select('id,title,description,game_type,maturity_rating,owner_id,thumbnail_path,pay_to_play,play_price,play_currency').eq('status','published').order('published_at',{ascending:false}).limit(60);if(error){el.innerHTML='<div class="empty">Explore More could not be loaded right now.</div>';return;}const ids=[...new Set((games||[]).map(g=>g.owner_id).filter(Boolean))];const {data:ents}=ids.length?await db.from('creator_entitlements').select('user_id,plan_id,status,ends_at').in('user_id',ids):{data:[]};const proIds=new Set((ents||[]).filter(e=>['silver','gold'].includes(e.plan_id)&&e.status==='active'&&(!e.ends_at||new Date(e.ends_at)>new Date())).map(e=>e.user_id));const selected=(games||[]).filter(g=>proIds.has(g.owner_id)).slice(0,12);el.innerHTML=selected.map(g=>`<article class="card"><div class="thumbnail">${g.game_type.toUpperCase()}</div><div class="card-body"><h3>${esc(g.title)}</h3><p>${esc(g.description||'')}</p><div class="meta"><span class="tag">${esc(g.game_type.toUpperCase())}</span><span class="tag">${esc(g.maturity_rating)}</span><span class="tag">Pro / Ultra creator</span></div><button class="btn primary full" style="margin-top:10px" onclick="navigate('game',{gameId:'${g.id}'})">Explore Game</button></div></article>`).join('')||'<div class="empty">More Pro and Ultra games will appear here as creators publish them.</div>';}
-async function loadGameCards(id,limit=20){
+async function loadExploreMoreGames(){const el=document.getElementById('exploreMoreGames');if(!el)return;const {data:games,error}=await db.from('games').select('id,title,description,game_type,maturity_rating,owner_id,thumbnail_path,pay_to_play,play_price,play_currency').eq('status','published').order('published_at',{ascending:false}).limit(60);if(error){el.innerHTML='<div class="empty">Explore More could not be loaded right now.</div>';return;}const ids=[...new Set((games||[]).map(g=>g.owner_id).filter(Boolean))];const {data:ents}=ids.length?await db.from('creator_entitlements').select('user_id,plan_id,status,ends_at').in('user_id',ids):{data:[]};const proIds=new Set((ents||[]).filter(e=>['silver','gold'].includes(e.plan_id)&&e.status==='active'&&(!e.ends_at||new Date(e.ends_at)>new Date())).map(e=>e.user_id));const selected=(games||[]).filter(g=>proIds.has(g.owner_id)).slice(0,12);el.innerHTML=selected.map(g=>`<article class="card"><div class="thumbnail">${g.thumbnail_path?`<img src="${esc(g.thumbnail_path)}" loading="lazy" style="width:100%;height:100%;object-fit:cover">`:g.game_type.toUpperCase()}</div><div class="card-body"><h3>${esc(g.title)}</h3><p>${esc(g.description||'')}</p><div class="meta"><span class="tag">${esc(g.game_type.toUpperCase())}</span><span class="tag">${esc(g.maturity_rating)}</span><span class="tag">Pro / Ultra creator</span></div><button class="btn primary full" style="margin-top:10px" onclick="navigate('game',{gameId:'${g.id}'})">Explore Game</button></div></article>`).join('')||'<div class="empty">More Pro and Ultra games will appear here as creators publish them.</div>';}
+async function loadGameCards(id,limit=20,searchText="") {
   const el=document.getElementById(id);if(!el)return;
-  const {data,error}=await db.from("games").select("id,title,description,game_type,maturity_rating,published_at,owner_id,thumbnail_path,pay_to_play,play_price,play_currency").eq("status","published").order("published_at",{ascending:false}).limit(limit);
+  const q=String(searchText||"").trim();
+  let query=db.from("games").select("id,title,description,game_type,maturity_rating,published_at,owner_id,thumbnail_path,pay_to_play,play_price,play_currency").eq("status","published");
+  if(q){const safe=q.replaceAll("%","\\%").replaceAll("_","\\_");query=query.ilike("title",`${safe}%`);}
+  const {data,error}=await query.order("published_at",{ascending:false}).limit(Math.min(limit,100));
   if(error){console.error(error);el.innerHTML=`<div class="empty">Games could not be loaded right now. Please try again.</div>`;return;}
-  if(!data?.length){el.innerHTML=`<div class="empty">No published games yet.<br>Create the first METGAME.</div>`;return;}
-  const ids=[...new Set(data.map(x=>x.owner_id).filter(Boolean))],profiles=ids.length?(await db.from("profiles").select("id,username,avatar_url,display_name").in("id",ids)).data||[]:[],pm={};profiles.forEach(p=>pm[p.id]=p);
-  el.innerHTML=data.map(g=>`<article class="card"><div class="thumbnail">${g.thumbnail_path?`<img src="${esc(g.thumbnail_path)}" style="width:100%;height:100%;object-fit:cover">`:g.game_type==="3d"?"3D":"2D"}</div><div class="card-body"><h3>${esc(g.title)}</h3><p>${esc(g.description||"No description yet.")}</p><div class="meta"><span class="tag">${esc(g.game_type.toUpperCase())}</span><span class="tag">${esc(g.maturity_rating)}</span><span class="tag creator-chip">${pm[g.owner_id]?.avatar_url?`<img src="${esc(pm[g.owner_id].avatar_url)}" alt="">`:esc((pm[g.owner_id]?.username||"C")[0].toUpperCase())} @${esc(pm[g.owner_id]?.username||"creator")}</span>${g.pay_to_play?`<span class="tag">Pay ${Number(g.play_price).toLocaleString()} ${esc(g.play_currency)}</span>`:`<span class="tag">Free to play</span>`}</div><button class="btn primary full" style="margin-top:12px" onclick="navigate('game',{gameId:'${g.id}'})">View / Play</button></div></article>`).join("");
+  if(!data?.length){el.innerHTML=`<div class="empty">${q?"No games start with that name.":"No published games yet.\nCreate the first MetVerse game."}</div>`;return;}
+  const ids=[...new Set(data.map(x=>x.owner_id).filter(Boolean))];
+  const [profilesRes,entsRes]=await Promise.all([
+    ids.length?db.from("profiles").select("id,username,avatar_url,display_name").in("id",ids):Promise.resolve({data:[]}),
+    ids.length?db.from("creator_entitlements").select("user_id,plan_id,status,ends_at").in("user_id",ids):Promise.resolve({data:[]})
+  ]);
+  const pm=Object.fromEntries((profilesRes.data||[]).map(p=>[p.id,p]));
+  const ent=Object.fromEntries((entsRes.data||[]).map(e=>[e.user_id,e]));
+  const featured=new Set((entsRes.data||[]).filter(e=>["silver","gold"].includes(e.plan_id)&&e.status==="active"&&(!e.ends_at||new Date(e.ends_at)>new Date())).map(e=>e.user_id));
+  data.sort((a,b)=>Number(featured.has(b.owner_id))-Number(featured.has(a.owner_id)));
+  el.innerHTML=data.map(g=>`<article class="card"><div class="thumbnail">${g.thumbnail_path?`<img src="${esc(g.thumbnail_path)}" loading="lazy" style="width:100%;height:100%;object-fit:cover">`:g.game_type==="3d"?"3D":"2D"}</div><div class="card-body"><h3>${esc(g.title)}</h3><p>${esc(g.description||"No description yet.")}</p><div class="meta">${featured.has(g.owner_id)?`<span class="tag">Pro / Ultra creator</span>`:""}<span class="tag">${esc(g.game_type.toUpperCase())}</span><span class="tag">${esc(g.maturity_rating)}</span><span class="tag creator-chip">${pm[g.owner_id]?.avatar_url?`<img src="${esc(pm[g.owner_id].avatar_url)}" loading="lazy" alt="">`:esc((pm[g.owner_id]?.username||"C")[0].toUpperCase())} @${esc(pm[g.owner_id]?.username||"creator")}</span>${g.pay_to_play?`<span class="tag">Pay ${Number(g.play_price).toLocaleString()} ${esc(g.play_currency)}</span>`:`<span class="tag">Free to play</span>`}</div><button class="btn primary full" style="margin-top:12px" onclick="navigate('game',{gameId:'${g.id}'})">View / Play</button></div></article>`).join("");
 }
-async function renderPlay(){setApp(`<div class="section-title"><h2>Play</h2><span>Discover published MetVerse</span></div><div id="playGames" class="grid"><div class="empty">Loading…</div></div>`);await loadGameCards("playGames",50);}
+async function renderPlay(){
+  setApp(`<div class="section-title"><h2>Play</h2><span>Pro and Ultra games are shown first as a thank-you to supporting creators</span></div><div class="search-box" style="margin-bottom:12px"><input id="playGameSearch" class="input" placeholder="Search games by starting letters…" autocomplete="off"><button class="btn primary" onclick="runPlaySearch()">Search</button></div><div id="playGames" class="grid"><div class="empty">Loading…</div></div>`);
+  const input=document.getElementById("playGameSearch");input?.addEventListener("keydown",e=>{if(e.key==="Enter")runPlaySearch();});
+  await loadGameCards("playGames",60);
+}
+async function runPlaySearch(){const q=document.getElementById("playGameSearch")?.value||"";await loadGameCards("playGames",60,q);}
 
 async function renderTrailers(){
   const {data,error}=await db.from("trailers").select("id,game_id,storage_path,audio_path,duration_seconds,media_mode,trailer_title,short_description,release_text,where_to_play,age_rating,game_type,creator_name,platform,status,games(title,description,status)").eq("status","published").order("created_at",{ascending:false}).limit(50);
@@ -1028,7 +1090,7 @@ async function fileDuration(file){if(!file)return 0;return new Promise((resolve,
 async function uploadPublic(file,folder){
   if(!file)return null;
   const {data:storage,error:storageError}=await db.rpc("get_metverse_storage_breakdown");if(storageError)throw storageError;
-  if(Number(storage?.used_bytes||0)+file.size+(audioFile?.size||0)>Number(storage?.limit_bytes||0))throw Error("STORAGE_LIMIT_REACHED");
+  if(Number(storage?.used_bytes||0)+file.size>Number(storage?.limit_bytes||0))throw Error("STORAGE_LIMIT_REACHED");
   const safe=file.name.replace(/[^a-zA-Z0-9._-]/g,"_"),path=`${currentUser.id}/${folder}/${Date.now()}_${crypto.randomUUID()}_${safe}`;
   const {error}=await db.storage.from(PUBLIC_BUCKET).upload(path,file,{upsert:false,contentType:file.type||undefined});
   if(error){console.error(error);throw Error("UPLOAD_FAILED");}
@@ -1107,6 +1169,7 @@ function openGameCreate(type="2d",advanced=false){
   document.getElementById("newGameType").value=type;
   document.getElementById("newGameTitle").value="";
   document.getElementById("newGameDescription").value="";
+  const thumbInput=document.getElementById("newGameThumbnail");if(thumbInput)thumbInput.value="";
   document.getElementById("newGameMaturity").value="all";
   document.getElementById("newGamePay").value="no";
   document.getElementById("newGamePrice").value="";
@@ -1168,6 +1231,15 @@ document.getElementById("gameCreateForm").addEventListener("submit",async e=>{
     if(error)throw Error(error.message||"Could not create the game.");
     const g=Array.isArray(data)?data[0]:data;
     if(!g?.id)throw Error("The game was created without an ID.");
+    const thumbnailFile=document.getElementById("newGameThumbnail")?.files?.[0]||null;
+    if(thumbnailFile){
+      if(!thumbnailFile.type.startsWith("image/"))throw Error("Game thumbnail must be an image.");
+      if(thumbnailFile.size>=1073741823)throw Error("Game thumbnail must be smaller than 1 GB.");
+      const thumbPath=await uploadPublic(thumbnailFile,"game-thumbnails");
+      const thumbUrl=db.storage.from(PUBLIC_BUCKET).getPublicUrl(thumbPath).data.publicUrl;
+      const {error:thumbError}=await db.from("games").update({thumbnail_path:thumbUrl}).eq("id",g.id).eq("owner_id",currentUser.id);
+      if(thumbError)throw Error("The game was created, but its thumbnail could not be saved.");
+    }
     const {data:configured,error:configError}=await db.rpc("set_game_play_price",{
       p_game_id:g.id,p_pay_to_play:pay,p_play_price:pay?price:null,p_play_currency:pay?currency:"INR"
     });
@@ -1223,7 +1295,7 @@ function renderEditor(){
   <div class="studio-shell"><div class="studio-bar"><div><b>${esc(editor.game.title)}</b><span class="tag" style="margin-left:8px">${esc(editor.game.game_type.toUpperCase())}</span></div><div class="studio-tabs"><button class="active">Scene</button><button onclick="openRulesPanel()">Rules</button><button onclick="addTimelineKey()">Timeline</button></div></div>
   <div class="studio-grid"><aside class="studio-side"><h3>Assets</h3>${renderAssetLibrary()}<div style="margin-top:15px"><label>Import extra asset</label><input type="file" id="assetUpload" accept="image/*" onchange="handleAssetUpload(this)"></div><div class="notice" style="margin-top:12px">Each asset has its own rule set. Dynamic assets expose only the rules that make sense for them.</div><h3 style="margin-top:18px">Objects</h3><div id="objectList" class="object-list"></div></aside>
   <section class="studio-center"><canvas id="gameCanvas" class="studio-canvas" width="900" height="500"></canvas><div id="editorRuntimeControls" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"></div><div class="small" style="margin-top:8px">Drag objects. Select one to edit its properties. Test uses the same scene data.</div><div class="timeline"><b>Timeline</b><div class="timeline-track" id="timelineTrack"></div></div><div class="rules" id="rulesPanel"><b>Rules</b><div id="rulesContent" class="small" style="margin-top:8px">Select an object and choose Rules.</div></div></section>
-  <aside class="studio-side right"><h3>Properties</h3><div id="properties"></div><hr style="border-color:#243047;margin:15px 0"><h3>Project</h3><div class="small">Status: ${esc(editor.game.status)}</div><div class="small">Workspace: ${isStudio()?"Studio":"Free Creator"}</div><div class="notice" style="margin-top:12px"><b>Game settings</b><div style="margin-top:10px"><label>Game type</label><select id="editorGameType" onchange="updateEditorGameType()" ${published?"disabled":""}><option value="2d" ${editor.game.game_type==="2d"?"selected":""}>2D</option><option value="3d" ${editor.game.game_type==="3d"?"selected":""}>3D</option></select></div><div style="margin-top:10px"><label>Maturity rating</label><select id="editorMaturity" onchange="updateEditorGameSettings()"><option value="all" ${editor.game.maturity_rating==="all"?"selected":""}>All</option><option value="7+" ${editor.game.maturity_rating==="7+"?"selected":""}>7+</option><option value="12+" ${editor.game.maturity_rating==="12+"?"selected":""}>12+</option><option value="13+" ${editor.game.maturity_rating==="13+"?"selected":""}>13+</option><option value="16+" ${editor.game.maturity_rating==="16+"?"selected":""}>16+</option><option value="18+" ${editor.game.maturity_rating==="18+"?"selected":""}>18+</option></select></div><label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input id="editorChatEnabled" type="checkbox" ${editor.game.chat_enabled?"checked":""} onchange="updateEditorGameSettings()" ${["13_15","16_18","18_plus"].includes(currentProfile?.age_category)&&["13+","16+","18+"].includes(editor.game.maturity_rating)?"":"disabled"}> Enable game chat</label><div class="small" style="margin-top:6px">Chat requires a 13+ creator account and a 13+ game maturity rating.</div></div>${editor.advanced?`<div class="advanced-tools-panel" style="margin-top:12px"><b>Advanced Studio</b><div class="small" style="margin-top:5px">${editor.game.game_type.toUpperCase()} advanced workspace</div><div class="small" style="margin-top:8px">Camera: orbit/zoom<br>Lighting: scene lights<br>Physics: gravity/collisions<br>Animation: keyframes<br>Blox: visual code<br>MEX AI: idea/rule assistant</div><button class="btn full" style="margin-top:10px" onclick="openAdvancedTools()">Open Advanced Tools</button></div>`:`<div class="notice" style="margin-top:12px">Free Creator: 2D scene + visual rules.</div>`}</aside></div></div>`;
+  <aside class="studio-side right"><h3>Properties</h3><div id="properties"></div><hr style="border-color:#243047;margin:15px 0"><h3>Project</h3><div class="small">Status: ${esc(editor.game.status)}</div><div class="small">Workspace: ${isStudio()?"Studio":"Free Creator"}</div><div class="notice" style="margin-top:12px"><b>Game settings</b><div style="margin-top:10px"><label>Game type</label><select id="editorGameType" onchange="updateEditorGameType()" ${published?"disabled":""}><option value="2d" ${editor.game.game_type==="2d"?"selected":""}>2D</option><option value="3d" ${editor.game.game_type==="3d"?"selected":""}>3D</option></select></div><div style="margin-top:10px"><label>Maturity rating</label><select id="editorMaturity" onchange="updateEditorGameSettings()"><option value="all" ${editor.game.maturity_rating==="all"?"selected":""}>All</option><option value="7+" ${editor.game.maturity_rating==="7+"?"selected":""}>7+</option><option value="12+" ${editor.game.maturity_rating==="12+"?"selected":""}>12+</option><option value="13+" ${editor.game.maturity_rating==="13+"?"selected":""}>13+</option><option value="16+" ${editor.game.maturity_rating==="16+"?"selected":""}>16+</option><option value="18+" ${editor.game.maturity_rating==="18+"?"selected":""}>18+</option></select></div><label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input id="editorChatEnabled" type="checkbox" ${editor.game.chat_enabled?"checked":""} onchange="updateEditorGameSettings()" ${["13_15","16_18","18_plus"].includes(currentProfile?.age_category)&&["13+","16+","18+"].includes(editor.game.maturity_rating)?"":"disabled"}> Enable game chat</label><div class="small" style="margin-top:6px">Chat requires a 13+ creator account and a 13+ game maturity rating.</div></div>${editor.advanced?`<div class="advanced-tools-panel" style="margin-top:12px"><b>Advanced Studio</b><div class="small" style="margin-top:5px">${editor.game.game_type.toUpperCase()} advanced workspace</div><div class="small" style="margin-top:8px">Camera: orbit/zoom<br>Lighting: scene lights<br>Physics: gravity/collisions<br>Animation: keyframes<br>Blox: visual code<br>MEX AI: idea/rule assistant<br>Polizer: Blox-code repair assistant</div><button class="btn full" style="margin-top:10px" onclick="openAdvancedTools()">Open Advanced Tools</button></div>`:`<div class="notice" style="margin-top:12px">Free Creator: 2D scene + visual rules.</div>`}</aside></div></div>`;
   renderObjectList();renderProperties();drawEditor();renderRules();drawTimeline();
 }
 function addObject(type){addBuiltInAsset(type);}
@@ -1344,8 +1416,28 @@ function addAdvancedAsset(kind){
   const d={cube:{label:"Cube",width:70,height:70,color:"#6aa8ff"},sphere:{label:"Sphere",width:70,height:70,color:"#8df0c8"},plane:{label:"Plane",width:150,height:30,color:"#66758f"},light:{label:"Light",width:35,height:35,color:"#ffe98a"},camera:{label:"Camera",width:45,height:30,color:"#d5a8ff"}}[kind]||{label:kind,width:60,height:60,color:"#fff"};
   const o={id:crypto.randomUUID(),type:"3d_"+kind,x:100+Math.random()*300,y:80+Math.random()*250,...d,rules:[]};editor.objects.push(o);editor.selected=o.id;editor.dirty=true;renderEditor();
 }
-function openAdvancedTools(){if(!editor.advanced){toast("Open this project with Advanced Studio to use these tools.","bad");return;}const panel=document.getElementById("properties");if(panel){document.getElementById("advancedToolDetails")?.remove();const is3d=editor.game?.game_type==="3d";panel.insertAdjacentHTML("beforeend",`<div id="advancedToolDetails" class="advanced-tools-panel" style="margin-top:12px"><b>Advanced Tools</b><div class="small" style="margin-top:8px">Camera: orbit / zoom<br>Lighting: scene lights<br>Physics: gravity / collisions<br>Animation: keyframes<br>Blox: visual code</div><div class="asset-section-title" style="margin-top:12px">3D Assets</div><div class="tool-grid"><button ${is3d?'':'disabled'} onclick="addAdvancedAsset('cube')">Cube</button><button ${is3d?'':'disabled'} onclick="addAdvancedAsset('sphere')">Sphere</button><button ${is3d?'':'disabled'} onclick="addAdvancedAsset('plane')">Plane</button><button ${is3d?'':'disabled'} onclick="addAdvancedAsset('light')">Light</button><button ${is3d?'':'disabled'} onclick="addAdvancedAsset('camera')">Camera</button></div><div class="small" style="margin-top:8px">${is3d?'3D assets are ready for this 3D project.':'3D assets are shown here and become active when the project type is switched to 3D.'}</div><button class="btn primary full" style="margin-top:12px" onclick="mexAI()">Ask MEX AI</button></div>`);}}
+function openAdvancedTools(){if(!editor.advanced){toast("Open this project with Advanced Studio to use these tools.","bad");return;}const panel=document.getElementById("properties");if(panel){document.getElementById("advancedToolDetails")?.remove();const is3d=editor.game?.game_type==="3d";panel.insertAdjacentHTML("beforeend",`<div id="advancedToolDetails" class="advanced-tools-panel" style="margin-top:12px"><b>Advanced Tools</b><div class="small" style="margin-top:8px">Camera: orbit / zoom<br>Lighting: scene lights<br>Physics: gravity / collisions<br>Animation: keyframes<br>Blox: visual code</div><div class="asset-section-title" style="margin-top:12px">3D Assets</div><div class="tool-grid"><button ${is3d?'':'disabled'} onclick="addAdvancedAsset('cube')">Cube</button><button ${is3d?'':'disabled'} onclick="addAdvancedAsset('sphere')">Sphere</button><button ${is3d?'':'disabled'} onclick="addAdvancedAsset('plane')">Plane</button><button ${is3d?'':'disabled'} onclick="addAdvancedAsset('light')">Light</button><button ${is3d?'':'disabled'} onclick="addAdvancedAsset('camera')">Camera</button></div><div class="small" style="margin-top:8px">${is3d?'3D assets are ready for this 3D project.':'3D assets are shown here and become active when the project type is switched to 3D.'}</div><button class="btn primary full" style="margin-top:12px" onclick="mexAI()">Ask MEX AI</button><button class="btn full" style="margin-top:8px" onclick="polizerAI()">Run Polizer on selected Blox</button></div>`);}}
 async function mexAI(){if(!isStudio()){openPlans();return;}const q=prompt("Tell MEX AI what you want your game to do:");if(!q)return;toast("MEX AI is thinking…");try{const {data,error}=await db.functions.invoke("mex-ai",{body:{message:q,context:{game:editor.game?.title,objects:editor.objects}}});if(error)throw Error(await edgeErrorText(error,"MetVerse media service is unavailable right now."));if(data?.error)throw Error(data.error);openGeneric(`<div class="head"><div><h2>MEX AI</h2><p>Advanced Studio assistant</p></div><button class="btn" onclick="closeGeneric()">Close</button></div><div class="notice ok" style="white-space:pre-wrap">${esc(data?.reply||"MEX AI returned no text.")}</div>`);}catch(x){toast("MEX AI is unavailable right now. Please try again later.","bad");}}
+async function polizerAI(){
+  if(!isStudio()){openPlans();return;}
+  if(!editor.selected){toast("Select an object first so Polizer knows which Blox rules to repair.","bad");return;}
+  const obj=editor.objects.find(o=>o.id===editor.selected);
+  if(!obj){toast("Select an object first.","bad");return;}
+  const request=prompt("What should this object do? Polizer will inspect its current Blox rules and repair them.");
+  if(!request)return;
+  toast("Polizer is checking the Blox rules…");
+  try{
+    const {data,error}=await invokeAuthenticatedFunction("polizer-ai",{request,bloxCode:obj.rules||[]});
+    if(error)throw Error(await edgeErrorText(error,"Polizer could not complete the request."));
+    if(data?.error)throw Error(data.error);
+    if(!Array.isArray(data?.rules))throw Error("Polizer returned no repaired rules.");
+    obj.rules=data.rules.map(r=>({when:String(r.when||"game_start"),do:String(r.do||"message"),target:String(r.target||"selected"),...(r.value!==undefined?{value:r.value}:{})}));
+    editor.dirty=true;
+    renderEditor();
+    toast("Polizer repaired the selected object's Blox rules. Review and test them before publishing.","ok");
+    openGeneric(`<div class="head"><div><h2>Polizer</h2><p>Blox-code repair result</p></div><button class="btn" onclick="closeGeneric()">Close</button></div><div class="notice ok" style="white-space:pre-wrap">${esc(data.summary||"The selected Blox rules were repaired.")}</div><div class="rules" style="margin-top:12px">${obj.rules.map(r=>`<div class="rule"><span class="block when">WHEN ${esc(r.when)}</span><span class="block do">DO ${esc(r.do)}</span><span class="small">${esc(r.target||"selected")}${r.value!==undefined?` = ${esc(r.value)}`:""}</span></div>`).join("")}</div>`);
+  }catch(x){console.error(x);toast(friendlyError(x.message||"Polizer is unavailable right now."),"bad");}
+}
 async function renderGame(gameId){
   const {data:game,error}=await db.from("games").select("id,title,description,game_type,maturity_rating,owner_id,published_at,creator_name_snapshot,pay_to_play,play_price,play_currency,chat_enabled").eq("id",gameId).eq("status","published").single();
   if(error){setApp(`<div class="empty">Game not found or not published.</div>`);return;}
@@ -1486,7 +1578,7 @@ async function createProfileStatus(){
   try{
     const {data:storage,error:storageError}=await db.rpc("get_metverse_storage_breakdown");
     if(storageError)throw storageError;
-    if(Number(storage?.used_bytes||0)+file.size+(audioFile?.size||0)>Number(storage?.limit_bytes||0)){toast(`Not enough storage. Your ${PLANS[currentEntitlement?.plan_id||"free"]?.name||"Free"} plan has ${PLANS[currentEntitlement?.plan_id||"free"]?.storage||"5 GB"} total storage.`,"bad");return;}
+    if(Number(storage?.used_bytes||0)+file.size>Number(storage?.limit_bytes||0)){toast(`Not enough storage. Your ${PLANS[currentEntitlement?.plan_id||"free"]?.name||"Free"} plan has ${PLANS[currentEntitlement?.plan_id||"free"]?.storage||"5 GB"} total storage.`,"bad");return;}
     const ext=(file.name.split(".").pop()||"bin").toLowerCase().replace(/[^a-z0-9]/g,"")||"bin";
     const path=`${currentUser.id}/${crypto.randomUUID()}.${ext}`;
     const {error}=await db.storage.from("status-photos").upload(path,file,{contentType:file.type,cacheControl:"3600"});
@@ -1518,6 +1610,7 @@ async function loadFollowerCards(userId){const {data:rows,error}=await db.from('
 
 async function renderProfile(){
   if(!currentUser){openAuth();return;}
+  setApp('<div class="empty">Loading your profile…</div>');
   const [gamesRes,statusRes,reviewRes,storageRes,inboxRes,followerRes]=await Promise.all([
     db.from("games").select("id,title,status,game_type,maturity_rating").eq("owner_id",currentUser.id).order("created_at",{ascending:false}),
     db.from("profile_statuses").select("id,image_url,video_url,audio_url,audio_storage_path,media_type,caption,created_at").eq("user_id",currentUser.id).order("created_at",{ascending:false}).limit(50),
