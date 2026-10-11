@@ -744,10 +744,35 @@ footer a{
 .quickup-meta{font-size:11px;color:var(--muted);margin-top:4px}
 .color-swatches{display:flex;flex-wrap:wrap;gap:6px}
 .color-swatch{border:1px solid rgba(255,255,255,.25);border-radius:7px;padding:7px 9px;color:white;font-size:11px;min-width:62px;text-shadow:0 1px 3px #000}
-.creator-actions{position:sticky;top:82px;z-index:20;background:rgba(7,9,18,.95);backdrop-filter:blur(12px);padding:8px 0}
+.creator-actions{position:sticky;top:82px;z-index:20;background:rgba(7,9,18,.95);backdrop-filter:blur(12px);padding:8px 0;display:flex;gap:7px;overflow-x:auto;overflow-y:hidden;white-space:nowrap;max-width:100%;-webkit-overflow-scrolling:touch}
 .studio-center canvas{max-width:100%;height:auto}
 @media(max-width:700px){.creator-actions{top:72px}.quickup-item{flex-basis:205px}}
 
+
+/* Mobile accessibility: make every modal, especially subscriptions, vertically scrollable. */
+html,body{min-height:100%;}
+body{overflow-y:auto;overscroll-behavior-y:auto;}
+.modal{overflow-y:auto;align-items:flex-start;-webkit-overflow-scrolling:touch;}
+.modal-box{max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
+#plansModal{overflow-y:auto;align-items:flex-start;padding:10px;}
+#plansModal .modal-box{width:min(1050px,100%);max-height:calc(100dvh - 20px);overflow-y:auto;padding-bottom:max(18px,env(safe-area-inset-bottom));}
+#plansModal .plan-grid{align-items:stretch;}
+#genericModal{overflow-y:auto;align-items:flex-start;padding:10px;}
+#genericModalBox{max-height:calc(100dvh - 20px);overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.quickup-strip{overflow-x:auto;overflow-y:hidden;max-width:100%;touch-action:pan-x;scroll-snap-type:x proximity;}
+.quickup-item{scroll-snap-align:start;}
+@media(max-width:700px){
+  .modal{padding:8px;}
+  .modal-box{border-radius:14px;padding:14px;max-height:calc(100dvh - 16px);}
+  #plansModal{padding:6px;}
+  #plansModal .modal-box{max-height:calc(100dvh - 12px);padding:12px;}
+  #plansModal .plan-grid{grid-template-columns:minmax(0,1fr)!important;}
+  #plansModal .plan-card{min-width:0;}
+  .metpay-page{min-height:0!important;width:100%!important;justify-content:flex-start;padding:14px!important;}
+  .metpay-panel{width:100%;}
+  .form input,.form select,.form textarea{width:100%;min-width:0;}
+  .quickup-item{flex-basis:205px;}
+}
 </style>
 </head>
 
@@ -1832,7 +1857,7 @@ async function openMetPayForm(context){
   await transition('metpay');
   return new Promise(resolve=>{
     metpayPending=context;
-    openGeneric(`<div class="metpay-panel"><div class="head"><div><h2>METPAY</h2><p>Powered by METXON</p></div><button class="btn" onclick="closeGeneric();window.__metpayResolver?.(null)">Close</button></div><div class="metpay-brand">MetPay</div><div class="metpay-sub">Secure fictional-currency payments</div><form id="metpayLoginForm" class="form"><div><label>METXON username</label><input id="metpayUsername" autocomplete="username" required minlength="3" maxlength="64" placeholder="Your METXON username"></div><div><label>METXON password</label><input id="metpayPassword" type="password" autocomplete="current-password" required placeholder="Enter your METXON password"><div class="small" style="margin-top:6px">Your password is sent directly to METXON authentication; MetVerse does not store it.</div></div><a href="https://nidhilarthicknet.github.io/metxon/" target="_blank" rel="noopener" style="color:#36e4ff;font-size:13px">Explore more from METXON ↗</a><div id="metpayFormError" class="form-error"></div><button id="metpayVerifyButton" class="btn primary full" type="submit">Verify in METPAY</button></form></div>`);
+    openGeneric(`<div class="metpay-panel"><div class="head"><div><h2>METPAY</h2><p>Powered by METXON</p></div><button class="btn" onclick="closeGeneric();window.__metpayResolver?.(null)">Close</button></div><div class="metpay-brand">MetPay</div><div class="metpay-sub">Secure fictional-currency payments</div><div class="notice">Pay using any METXON account you are authorised to use. It does not need to have the same username or password as your MetVerse account. A friend can pay only when they agree and sign in to their own METXON account.</div><form id="metpayLoginForm" class="form"><div><label>METXON username</label><input id="metpayUsername" autocomplete="username" required minlength="3" maxlength="64" placeholder="METXON account username"></div><div><label>METXON password</label><input id="metpayPassword" type="password" autocomplete="current-password" required placeholder="Enter that METXON account password"><div class="small" style="margin-top:6px">Credentials are sent to METXON authentication only; MetVerse does not store them or compare them with your MetVerse login.</div></div><a href="https://nidhilarthicknet.github.io/metxon/" target="_blank" rel="noopener" style="color:#36e4ff;font-size:13px">Explore more from METXON ↗</a><div id="metpayFormError" class="form-error"></div><button id="metpayVerifyButton" class="btn primary full" type="submit">Verify in METPAY</button></form></div>`);
     document.getElementById('genericModalBox').classList.add('metpay-page');
     window.__metpayResolver=resolve;
     document.getElementById('metpayLoginForm').onsubmit=async e=>{e.preventDefault();const b=document.getElementById('metpayVerifyButton'),err=document.getElementById('metpayFormError');b.disabled=true;b.textContent='Verifying…';err.textContent='';const answer={username:document.getElementById('metpayUsername').value.trim(),password:document.getElementById('metpayPassword').value};b.textContent='Verifying in METPAY…';const note=document.createElement('div');note.className='notice';note.textContent='Checking your METXON account and payment. Please wait.';e.currentTarget.appendChild(note);window.__metpayResolver=null;resolve(answer);};
@@ -1842,7 +1867,7 @@ async function authorizeMetPayAndTransfer(context,currency){
   const credentials=await openMetPayForm(context);if(!credentials)throw Error('METPAY verification was cancelled.');
   const authResponse=await fetch(METXON_AUTH_FUNCTION,{method:'POST',headers:{'Content-Type':'application/json','apikey':METXON_KEY},body:JSON.stringify({action:'login',username:credentials.username,password:credentials.password})});
   const authData=await authResponse.json().catch(()=>({}));credentials.password='';
-  if(!authResponse.ok||!authData.session){openGeneric(`<div class="head"><div><h2>METPAY sign-in failed</h2><p>METXON could not verify those details.</p></div><button class="btn" onclick="closeGeneric()">Close</button></div><div class="notice bad">Check your METXON username and password. You can also open METXON to recover or create your account.</div><a class="btn primary full" style="margin-top:12px" href="https://nidhilarthicknet.github.io/metxon/" target="_blank" rel="noopener">Open METXON</a>`);throw Error('METPAY sign-in failed. Check the METXON details or open METXON from the sign-in page.');}
+  if(!authResponse.ok||!authData.session){const detail=String(authData.error||authData.message||'').toLowerCase();const accountMissing=/not found|user not found|no user|invalid login credentials|invalid credentials|does not exist/.test(detail);openGeneric(`<div class="head"><div><h2>METPAY sign-in failed</h2><p>METXON could not verify that account.</p></div><button class="btn" onclick="closeGeneric()">Close</button></div><div class="notice bad">${accountMissing?'We could not sign in to that METXON account. Check the username, or create a METXON account first.':'METXON did not approve this sign-in. Check the account details and try again, or use the METXON site to recover your account.'} MetVerse and METXON usernames/passwords do not need to match.</div><a class="btn primary full" style="margin-top:12px" href="https://nidhilarthicknet.github.io/metxon/" target="_blank" rel="noopener">Open METXON to sign in or create an account</a>`);throw Error(accountMissing?'METXON account not found or sign-in failed. Create a METXON account if you do not have one.':'METPAY sign-in failed. Check the METXON details or open METXON from the sign-in page.');}
   const {error:setError}=await metxonClient.auth.setSession({access_token:authData.session.access_token,refresh_token:authData.session.refresh_token});
   if(setError)throw Error('METPAY could not open the verified METXON session.');
   let transfer;
