@@ -1206,7 +1206,7 @@ async function renderCreate(){
   setApp(`<div class="section-title"><h2>Create</h2><span>Choose your creator workspace</span></div>
   <div class="creator-choice">
     <button class="choice" onclick="openGameCreate('2d')"><h3>Free Creator</h3><p>Beginner-friendly 2D editor with assets, objects, timeline, visual rules, test mode and publishing.</p><span class="tag">Available</span></button>
-    <button class="choice ${isStudio()?"":"locked"}" onclick="${isStudio()?"openAdvancedStudio()":"openPlans()"}"><h3>Advanced Studio ${isStudio()?"":"🔒"}</h3><p>Advanced 2D or 3D workspace with camera, lighting, physics, animation, Blox coding and MEX AI.</p><span class="tag">${isStudio()?currentEntitlement.plan_id.toUpperCase():"Base / Pro / Ultra"}</span></button>
+    <button class="choice ${isStudio()?"":"locked"}" onclick="${isStudio()?"openAdvancedStudio()":"openPlans()"}"><h3>Advanced Studio ${isStudio()?"":"🔒"}</h3><p>Advanced 2D or 3D workspace with camera, lighting, physics, animation, Blox coding and MEX AI.</p><span class="tag">${isStudio()?(PLANS[currentEntitlement.plan_id]?.name||currentEntitlement.plan_id.toUpperCase()):"Base / Pro / Ultra"}</span></button>
   </div>
   <div id="creatorContent"></div>
   <div class="section-title"><h2>Create Ads</h2><span>${canAds()?"Ultra":"Ultra required"}</span></div>
