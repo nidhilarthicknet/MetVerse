@@ -1212,6 +1212,15 @@ async function renderCreate(){
   <div class="section-title"><h2>Create Ads</h2><span>${canAds()?"Ultra":"Ultra required"}</span></div>
   ${renderAdCreator()}`);
   await loadMyGames();
+  await loadAdTargetGames();
+}
+async function loadAdTargetGames(){
+ const sel=document.getElementById("adTargetGame");if(!sel||!currentUser)return;
+ sel.innerHTML='<option value="">Choose one of your published games</option>';
+ const {data,error}=await db.from("games").select("id,title,game_type").eq("owner_id",currentUser.id).eq("status","published").order("published_at",{ascending:false}).limit(100);
+ if(error){sel.innerHTML='<option value="">Could not load published games</option>';console.error("Ad target games:",error);return;}
+ for(const game of (data||[])){const opt=document.createElement("option");opt.value=game.id;opt.textContent=game.title+" ("+String(game.game_type||"").toUpperCase()+")";sel.appendChild(opt);}
+ if(!data?.length)sel.innerHTML='<option value="">Publish a game before creating an ad</option>';
 }
 function openGameCreate(type="2d",advanced=false){
   if(!currentUser){openAuth();return;}
@@ -1470,25 +1479,24 @@ function addAdvancedAsset(kind){
   const o={id:crypto.randomUUID(),type:"3d_"+kind,x:100+Math.random()*300,y:80+Math.random()*250,...d,rules:[]};editor.objects.push(o);editor.selected=o.id;editor.dirty=true;renderEditor();
 }
 function openAdvancedTools(){if(!editor.advanced){toast("Open this project with Advanced Studio to use these tools.","bad");return;}const panel=document.getElementById("properties");if(panel){document.getElementById("advancedToolDetails")?.remove();const is3d=editor.game?.game_type==="3d";panel.insertAdjacentHTML("beforeend",`<div id="advancedToolDetails" class="advanced-tools-panel" style="margin-top:12px"><b>Advanced Tools</b><div class="small" style="margin-top:8px">Camera: orbit / zoom<br>Lighting: scene lights<br>Physics: gravity / collisions<br>Animation: keyframes<br>Blox: visual code</div><div class="asset-section-title" style="margin-top:12px">3D Assets</div><div class="tool-grid"><button ${is3d?'':'disabled'} onclick="addAdvancedAsset('cube')">Cube</button><button ${is3d?'':'disabled'} onclick="addAdvancedAsset('sphere')">Sphere</button><button ${is3d?'':'disabled'} onclick="addAdvancedAsset('plane')">Plane</button><button ${is3d?'':'disabled'} onclick="addAdvancedAsset('light')">Light</button><button ${is3d?'':'disabled'} onclick="addAdvancedAsset('camera')">Camera</button></div><div class="small" style="margin-top:8px">${is3d?'3D assets are ready for this 3D project.':'3D assets are shown here and become active when the project type is switched to 3D.'}</div><button class="btn primary full" style="margin-top:12px" onclick="mexAI()">Ask MEX AI</button><button class="btn full" style="margin-top:8px" onclick="polizerAI()">Run Polizer on selected Blox</button></div>`);}}
-async function mexAI(){if(!isStudio()){openPlans();return;}const q=prompt("Tell MEX AI what you want your game to do:");if(!q)return;toast("MEX AI is thinking…");try{const {data,error}=await db.functions.invoke("mex-ai",{body:{message:q,context:{game:editor.game?.title,objects:editor.objects}}});if(error)throw Error(await edgeErrorText(error,"MetVerse media service is unavailable right now."));if(data?.error)throw Error(data.error);openGeneric(`<div class="head"><div><h2>MEX AI</h2><p>Advanced Studio assistant</p></div><button class="btn" onclick="closeGeneric()">Close</button></div><div class="notice ok" style="white-space:pre-wrap">${esc(data?.reply||"MEX AI returned no text.")}</div>`);}catch(x){toast("MEX AI is unavailable right now. Please try again later.","bad");}}
+async function mexAI(){if(!isStudio()){openPlans();return;}const q=prompt("Tell MEX AI what you want your game to do:");if(!q)return;toast("MEX AI is thinking…");try{const {data,error}=await invokeAuthenticatedFunction("mex-ai",{message:q,context:{game:editor.game?.title,gameType:editor.game?.game_type,objects:editor.objects,selectedObject:editor.objects.find(o=>o.id===editor.selected)||null,textFields:editor.objects.filter(o=>o.type==="text").map(o=>({id:o.id,text:o.text||o.label||""}))}});if(error)throw Error(await edgeErrorText(error,"MEX AI service could not complete the request."));if(data?.error)throw Error(data.message||data.error);openGeneric(`<div class="head"><div><h2>MEX AI</h2><p>Advanced Studio assistant</p></div><button class="btn" onclick="closeGeneric()">Close</button></div><div class="notice ok" style="white-space:pre-wrap">${esc(data?.reply||"MEX AI returned no text.")}</div>`);}catch(x){console.error(x);toast(friendlyError(x.message||"MEX AI is unavailable right now."),"bad");}}
 async function polizerAI(){
   if(!isStudio()){openPlans();return;}
   if(!editor.selected){toast("Select an object first so Polizer knows which Blox rules to repair.","bad");return;}
-  const obj=editor.objects.find(o=>o.id===editor.selected);
-  if(!obj){toast("Select an object first.","bad");return;}
-  const request=prompt("What should this object do? Polizer will inspect its current Blox rules and repair them.");
-  if(!request)return;
+  const obj=editor.objects.find(o=>o.id===editor.selected);if(!obj){toast("Select an object first.","bad");return;}
+  const request=prompt("What should this object do? Polizer will inspect the current game and propose Blox-rule corrections.");if(!request)return;
   toast("Polizer is checking the Blox rules…");
   try{
-    const {data,error}=await invokeAuthenticatedFunction("polizer-ai",{request,bloxCode:obj.rules||[]});
+    const draft={game:{id:editor.game?.id,title:editor.game?.title,game_type:editor.game?.game_type},objects:editor.objects,selectedObjectId:obj.id};
+    const {data,error}=await invokeAuthenticatedFunction("polizer-ai",{action:"fix_blox",request,draft,selectedObjectId:obj.id});
     if(error)throw Error(await edgeErrorText(error,"Polizer could not complete the request."));
-    if(data?.error)throw Error(data.error);
-    if(!Array.isArray(data?.rules))throw Error("Polizer returned no repaired rules.");
-    obj.rules=data.rules.map(r=>({when:String(r.when||"game_start"),do:String(r.do||"message"),target:String(r.target||"selected"),...(r.value!==undefined?{value:r.value}:{})}));
-    editor.dirty=true;
-    renderEditor();
-    toast("Polizer repaired the selected object's Blox rules. Review and test them before publishing.","ok");
-    openGeneric(`<div class="head"><div><h2>Polizer</h2><p>Blox-code repair result</p></div><button class="btn" onclick="closeGeneric()">Close</button></div><div class="notice ok" style="white-space:pre-wrap">${esc(data.summary||"The selected Blox rules were repaired.")}</div><div class="rules" style="margin-top:12px">${obj.rules.map(r=>`<div class="rule"><span class="block when">WHEN ${esc(r.when)}</span><span class="block do">DO ${esc(r.do)}</span><span class="small">${esc(r.target||"selected")}${r.value!==undefined?` = ${esc(r.value)}`:""}</span></div>`).join("")}</div>`);
+    if(data?.error)throw Error(data.message||data.error);
+    const fixes=Array.isArray(data?.corrected_rules)?data.corrected_rules.filter(r=>!r.object_id||r.object_id===obj.id):[];
+    if(!fixes.length)throw Error(data?.summary||"Polizer returned no corrected rules for this object.");
+    obj.rules=fixes.map(r=>({when:String(r.when||"game_start"),do:String(r.do||"message"),target:String(r.target||"selected"),...(r.value!==undefined&&r.value!==""?{value:r.value}:{}),...(r.variable?{variable:r.variable}:{})}));
+    editor.dirty=true;renderEditor();
+    toast("Polizer proposed corrected rules. Test the game before publishing.","ok");
+    openGeneric(`<div class="head"><div><h2>Polizer</h2><p>Blox-code repair result</p></div><button class="btn" onclick="closeGeneric()">Close</button></div><div class="notice ok" style="white-space:pre-wrap">${esc(data.summary||"Review the corrected rules below.")}</div><div class="rules" style="margin-top:12px">${obj.rules.map(r=>`<div class="rule"><span class="block when">WHEN ${esc(r.when)}</span><span class="block do">DO ${esc(r.do)}</span><span class="small">${esc(r.target||"selected")}${r.value!==undefined?` = ${esc(r.value)}`:""}</span></div>`).join("")}</div>`);
   }catch(x){console.error(x);toast(friendlyError(x.message||"Polizer is unavailable right now."),"bad");}
 }
 async function renderGame(gameId){
@@ -1587,15 +1595,18 @@ async function rateGame(gameId,rating){if(!currentUser){openAuth();return;}const
 function renderAdCreator(){
   if(!currentUser)return `<div class="choice locked"><h3>Ads</h3><p>Log in to create an advertisement.</p></div>`;
   if(!canAds())return `<div class="choice locked"><h3>Create Ads 🔒</h3><p>Ultra members can create ads. Ads target game category + game type + platform, not an individual game.</p><button class="btn primary" onclick="openPlans()">View plans</button></div>`;
-  return `<div class="media-grid"><div class="media-card"><h3>Advertisement</h3><div class="form"><div><label>Media</label><select id="adMode" onchange="toggleMediaMode('ad')"><option value="video">Video</option><option value="slideshow">Image slideshow</option></select></div><div id="adVideoRow"><label>Video (max 60 seconds)</label><input id="adVideo" type="file" accept="video/*"></div><div><label>Separate audio (optional)</label><input id="adAudio" type="file" accept="audio/*"></div><div id="adImageRow" style="display:none"><label>Images</label><input id="adImages" type="file" accept="image/*" multiple></div><div class="form-row"><div><label>Game category</label><select id="adCategory"><option>Adventure</option><option>Action</option><option>Platformer</option><option>Puzzle</option><option>Racing</option><option>Sports</option><option>Simulation</option><option>Educational</option></select></div><div><label>Game type</label><select id="adType"><option>2D</option><option>3D</option></select></div></div><div class="form-row"><div><label>Platform</label><select id="adPlatform"><option>Web</option><option>Android</option><option>iOS</option><option>PC</option></select></div><div><label>Age rating</label><select id="adAge"><option>All</option><option>7+</option><option>12+</option><option>13+</option><option>16+</option><option>18+</option></select></div></div><button class="btn primary" onclick="createAdNow()">Create & publish ad</button><div id="adStatus" class="notice" style="display:none"></div></div></div><div class="media-card"><h3>Placement</h3><div class="notice">Ultra ads can target a category, game type and platform. Minimum placement frequency is one ad every 3 minutes.</div></div></div>`;
+  return `<div class="media-grid"><div class="media-card"><h3>Advertisement</h3><div class="form"><div><label>Media</label><select id="adMode" onchange="toggleMediaMode('ad')"><option value="video">Video</option><option value="slideshow">Image slideshow</option></select></div><div id="adVideoRow"><label>Video (max 60 seconds)</label><input id="adVideo" type="file" accept="video/*"></div><div><label>Separate audio (optional)</label><input id="adAudio" type="file" accept="audio/*"></div><div id="adImageRow" style="display:none"><label>Images</label><input id="adImages" type="file" accept="image/*" multiple></div><div class="form-row"><div><label>Game category</label><select id="adCategory"><option>Adventure</option><option>Action</option><option>Platformer</option><option>Puzzle</option><option>Racing</option><option>Sports</option><option>Simulation</option><option>Educational</option></select></div><div><label>Game type</label><select id="adType"><option>2D</option><option>3D</option></select></div></div><div><label>Place this ad in your published game</label><select id="adTargetGame"><option value="">Loading your published games…</option></select></div><div><label>Placement interval</label><select id="adPlacementInterval"><option value="180">Every 3 minutes</option><option value="240">Every 4 minutes</option><option value="300">Every 5 minutes</option><option value="360">Every 6 minutes</option></select></div><div class="form-row"><div><label>Platform</label><select id="adPlatform"><option>Web</option><option>Android</option><option>iOS</option><option>PC</option></select></div><div><label>Age rating</label><select id="adAge"><option>All</option><option>7+</option><option>12+</option><option>13+</option><option>16+</option><option>18+</option></select></div></div><button class="btn primary" onclick="createAdNow()">Create & publish ad</button><div id="adStatus" class="notice" style="display:none"></div></div></div><div class="media-card"><h3>Placement</h3><div class="notice">Ultra ads can target a category, game type and platform. Minimum placement frequency is one ad every 3 minutes.</div></div></div>`;
 }
 async function createAdNow(){
   const status=document.getElementById("adStatus");status.style.display="block";status.textContent="Creating ad…";
   try{
+    if(!currentUser)throw Error("LOGIN_REQUIRED");
+    const targetGameId=document.getElementById("adTargetGame")?.value;
+    if(!targetGameId)throw Error("Choose one of your published games for ad placement.");
     const mode=document.getElementById("adMode").value,video=document.getElementById("adVideo")?.files[0],audio=document.getElementById("adAudio")?.files[0];let duration=10,videoPath=null,audioPath=null,images=[];
     if(mode==="video"){if(!video)throw Error("Choose a video.");duration=Math.ceil(await fileDuration(video));if(duration<1||duration>60)throw Error("Ad video must be 1–60 seconds.");videoPath=await uploadPublic(video,"ads");}else{const files=[...(document.getElementById("adImages")?.files||[])];if(!files.length)throw Error("Choose at least one image.");images=await Promise.all(files.map(f=>uploadPublic(f,"ad-images")));duration=10;}
     if(audio)audioPath=await uploadPublic(audio,"ad-audio");
-    const {data,error}=await invokeAuthenticatedFunction("metgames-media",{action:"create_ad",payload:{mediaMode:mode,videoPath,audioPath,imageManifest:images,durationSeconds:duration,gameCategory:document.getElementById("adCategory").value,gameType:document.getElementById("adType").value.toLowerCase(),platform:document.getElementById("adPlatform").value,ageRating:document.getElementById("adAge").value,creatorName:currentProfile?.display_name||currentProfile?.username||"Creator"}});
+    const {data,error}=await invokeAuthenticatedFunction("metgames-media",{action:"create_ad",payload:{mediaMode:mode,videoPath,audioPath,imageManifest:images,durationSeconds:duration,gameCategory:document.getElementById("adCategory").value,gameType:document.getElementById("adType").value.toLowerCase(),platform:document.getElementById("adPlatform").value,ageRating:document.getElementById("adAge").value,creatorName:currentProfile?.display_name||currentProfile?.username||"Creator",targetGameId:document.getElementById("adTargetGame")?.value||null,placementIntervalSeconds:Number(document.getElementById("adPlacementInterval")?.value||180)}});
     if(error)throw Error(await edgeErrorText(error,"MetVerse media service is unavailable right now."));if(data?.error)throw Error(data.error);const id=data?.data?.id||data?.data?.ad_id||data?.id;if(!id)throw Error("No advertisement ID returned.");
     const pub=await invokeAuthenticatedFunction("metgames-media",{action:"publish_ad",adId:id});if(pub.error)throw Error(await edgeErrorText(pub.error,"Publishing is unavailable right now."));if(pub.data?.error)throw Error(pub.data.error);
     status.className="notice ok";status.textContent="Advertisement published.";toast("Advertisement published.","ok");
@@ -1723,6 +1734,7 @@ function friendlyError(message){
   const m=String(message||"");
   const map={LOGIN_REQUIRED:"Your MetVerse session could not be verified. Please refresh the page and try again.",AUTH_REQUIRED:"Please log in first.",CREATOR_ENTITLEMENT_MISSING:"Your creator workspace is not ready yet. Refresh your account and try again.",WEEKLY_GAME_LIMIT:"Free Creator allows up to 5 new games each week.",INVALID_GAME_TYPE:"Choose either 2D or 3D.",INVALID_MATURITY_RATING:"Choose a valid maturity rating.",CHAT_NOT_AVAILABLE:"Chat requires a 13+ account and a 13+ maturity rating for the game.",NOT_OWNER:"You can only change your own game.",GAME_ALREADY_PUBLISHED:"Unpublish the game before changing its type.",INVALID_RESPONSE_CHOICE:"Choose Yes, No, or Later.",REVIEW_NOT_FOUND:"That review could not be found.",MISSING_TITLE:"Enter a game name first.",INVALID_PLAY_PRICE:"Enter a valid pay-to-play price.",UNSUPPORTED_PLAY_CURRENCY:"Choose a supported currency.",TRAILER_SUBSCRIPTION_REQUIRED:"Trailer creation requires Pro or Ultra.",TRAILER_VIDEO_REQUIRED:"Choose a trailer video.",TRAILER_GAME_NOT_FOUND:"That game name could not be found in your creator account. Type the name of one of your games.",TRAILER_GAME_REQUIRED:"Enter the game name first.",TRAILER_IMAGES_REQUIRED:"Choose at least one trailer image.",TRAILER_MAX_60_SECONDS:"Trailer media must be 1–60 seconds.",ADS_GOLD_REQUIRED:"Ad creation requires Ultra.",AD_VIDEO_REQUIRED:"Choose an ad video.",AD_IMAGES_REQUIRED:"Choose at least one ad image.",AD_MAX_60_SECONDS:"Ad media must be 1–60 seconds.",CHAT_NOT_ENABLED:"Chat is not enabled for this game.",CHAT_AGE_REQUIRED:"Chat is available for 13+ accounts.",CHAT_TARGET_AGE_REQUIRED:"Direct chat is available when both accounts are 13+.",UPLOAD_FAILED:"The file could not be uploaded. Check the file type/size and try again.",STORAGE_LIMIT_REACHED:"You have reached your plan storage limit. Delete some files or upgrade your plan."};
   for(const [code,msg] of Object.entries(map))if(m.includes(code))return msg;
+  if(/METPAY_LOW_BALANCE|insufficient balance|low balance|not enough balance/i.test(m))return "Low balance: the selected METXON account does not have enough JP. No subscription was activated.";
   if(/Edge Function returned a non-2xx|non-2xx/i.test(m))return "The server could not complete that request. Please try again.";
   return m||"The request could not be completed.";
 }
@@ -1741,8 +1753,10 @@ async function edgeErrorText(error,fallback="The server could not complete that 
 }
 async function startPayment(planId){
   if(!currentUser){closePlans();openAuth();return;}
-  const currency=prompt("METPAY display currency (INR/USD/GBP/EUR/AED):","INR")?.trim().toUpperCase()||"INR";
-  const metxonPassword=prompt("Enter your METXON / METACCOUNT password to authorize this fictional METPAY purchase. It is sent only to METXON authentication and is not stored by MetGames:");
+  const currency=prompt("METPAY display currency (INR/USD/GBP/EUR/AED/JP):","INR")?.trim().toUpperCase()||"INR";
+  const payerUsername=prompt("METPAY payer's METXON username (you may use your own account or a friend's account with their permission):")?.trim();
+  if(!payerUsername)return;
+  const metxonPassword=prompt("Enter the METXON password for @"+payerUsername+". It is sent only to METXON authentication and is not saved in MetVerse:");
   if(!metxonPassword)return;
   try{
     toast("Preparing METPAY…");
@@ -1750,19 +1764,13 @@ async function startPayment(planId){
     if(startError)throw Error(await edgeErrorText(startError,"METPAY could not start the payment."));
     if(start?.error)throw Error(start.error);
 
-    const username=String(currentProfile?.username||"").trim().toLowerCase();
-    const {data:resolvedName,error:resolveError}=await metxonClient.rpc("resolve_metpay_username",{p_username:username});
-    if(resolveError)throw Error("METPAY could not link your METGAMES username to a METXON account.");
-    const metxonUsername=String(resolvedName||"").trim();
-    if(!metxonUsername)throw Error("No linked METXON account was found for this METGAMES username.");
-
     const authResponse=await fetch(METXON_AUTH_FUNCTION,{
       method:"POST",
       headers:{"Content-Type":"application/json","apikey":METXON_KEY},
-      body:JSON.stringify({action:"login",username:metxonUsername,password:metxonPassword})
+      body:JSON.stringify({action:"login",username:payerUsername,password:metxonPassword})
     });
     const authData=await authResponse.json().catch(()=>({}));
-    if(!authResponse.ok||!authData.session)throw Error(authData.error||"METXON password is invalid for the linked account.");
+    if(!authResponse.ok||!authData.session)throw Error(authData.error||"METXON username or password is incorrect. If this account does not exist, create it on METXON.");
 
     const {error:setError}=await metxonClient.auth.setSession({
       access_token:authData.session.access_token,
@@ -1775,7 +1783,7 @@ async function startPayment(planId){
       transfer_amount:Number(start.amount_jp),
       payment_reference:String(start.reference)
     });
-    if(transferError)throw Error(transferError.message);
+    if(transferError){const m=String(transferError.message||"");if(/insufficient|low balance|not enough balance/i.test(m))throw Error("METPAY_LOW_BALANCE: The selected METXON account does not have enough JP.");throw Error(m);}
     if(transfer?.error)throw Error(transfer.error);
 
     const oldSession=(await metxonClient.auth.getSession()).data.session;
