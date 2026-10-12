@@ -773,6 +773,19 @@ body{overflow-y:auto;overscroll-behavior-y:auto;}
   .form input,.form select,.form textarea{width:100%;min-width:0;}
   .quickup-item{flex-basis:205px;}
 }
+
+/* MEX AI conversation panel */
+.mex-chat-panel{margin:18px 0 24px;border:1px solid #2b4160;border-radius:18px;background:linear-gradient(145deg,#0d1626,#080d16);padding:18px;box-shadow:0 14px 45px rgba(0,0,0,.22)}
+.mex-chat-panel[hidden]{display:none!important}.mex-chat-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.mex-chat-messages{display:flex;flex-direction:column;gap:10px;max-height:390px;overflow:auto;padding:12px;margin:14px 0;border:1px solid #202d43;border-radius:12px;background:#070b12}
+.mex-chat-message{max-width:92%;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55;padding:11px 13px;border-radius:13px}
+.mex-chat-message.user{align-self:flex-end;background:#15324b;border:1px solid #24547b}
+.mex-chat-message.assistant{align-self:flex-start;background:#111a29;border:1px solid #29374f}
+.mex-chat-message.error{align-self:flex-start;background:#30131c;border:1px solid #6b2a3b;color:#ffb1bf}
+.mex-chat-compose{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;align-items:end}
+.mex-chat-compose textarea{min-height:54px;max-height:150px;resize:vertical}
+.mex-chat-compose button{min-height:48px}.mex-chat-note{font-size:12px;color:#8d9db6;margin-top:8px}
+@media(max-width:600px){.mex-chat-panel{padding:12px}.mex-chat-compose{grid-template-columns:1fr}.mex-chat-compose button{width:100%}.mex-chat-message{max-width:100%}}
 </style>
 </head>
 
@@ -1209,7 +1222,13 @@ async function renderCreate(){
     <button class="choice ${isStudio()?"":"locked"}" onclick="${isStudio()?"openAdvancedStudio()":"openPlans()"}"><h3>Advanced Studio ${isStudio()?"":"🔒"}</h3><p>Advanced 2D or 3D workspace with camera, lighting, physics, animation, Blox coding and MEX AI.</p><span class="tag">${isStudio()?(PLANS[currentEntitlement.plan_id]?.name||currentEntitlement.plan_id.toUpperCase()):"Base / Pro / Ultra"}</span></button>
   </div>
   <div id="creatorContent"></div>
-  <div class="section-title"><h2>Create Ads</h2><span>${canAds()?"Ultra":"Ultra required"}</span></div>
+  <section id="mexAIChatPanel" class="mex-chat-panel" hidden>
+<div class="mex-chat-head"><div><h2 style="margin:0">MEX AI</h2><p class="small" style="margin:6px 0 0">Chat with your game-building assistant. Ask follow-up questions just like a conversation.</p></div><button class="btn" onclick="closeMexAIChat()">Close</button></div>
+<div id="mexAIChatMessages" class="mex-chat-messages" role="log" aria-live="polite"><div class="mex-chat-message assistant">Hi! I’m MEX AI. Tell me what you’re building or what you want to fix in your game.</div></div>
+<form class="mex-chat-compose" onsubmit="event.preventDefault();sendMexAIMessage()"><textarea id="mexAIChatInput" maxlength="6000" placeholder="Ask Mex AI…" aria-label="Ask Mex AI" required></textarea><button id="mexAIChatSend" class="btn primary" type="submit">Ask Mex AI</button></form>
+<div class="mex-chat-note">MEX AI can advise on gameplay, levels, assets, Blox rules, animation, audio and debugging. Review and test changes before publishing.</div>
+</section>
+<div class="section-title"><h2>Create Ads</h2><span>${canAds()?"Ultra":"Ultra required"}</span></div>
   ${renderAdCreator()}`);
   await loadMyGames();
   await loadAdTargetGames();
@@ -1478,26 +1497,59 @@ function addAdvancedAsset(kind){
   const d={cube:{label:"Cube",width:70,height:70,color:"#6aa8ff"},sphere:{label:"Sphere",width:70,height:70,color:"#8df0c8"},plane:{label:"Plane",width:150,height:30,color:"#66758f"},light:{label:"Light",width:35,height:35,color:"#ffe98a"},camera:{label:"Camera",width:45,height:30,color:"#d5a8ff"}}[kind]||{label:kind,width:60,height:60,color:"#fff"};
   const o={id:crypto.randomUUID(),type:"3d_"+kind,x:100+Math.random()*300,y:80+Math.random()*250,...d,rules:[]};editor.objects.push(o);editor.selected=o.id;editor.dirty=true;renderEditor();
 }
-function openAdvancedTools(){if(!editor.advanced){toast("Open this project with Advanced Studio to use these tools.","bad");return;}const panel=document.getElementById("properties");if(panel){document.getElementById("advancedToolDetails")?.remove();const is3d=editor.game?.game_type==="3d";panel.insertAdjacentHTML("beforeend",`<div id="advancedToolDetails" class="advanced-tools-panel" style="margin-top:12px"><b>Advanced Tools</b><div class="small" style="margin-top:8px">Camera: orbit / zoom<br>Lighting: scene lights<br>Physics: gravity / collisions<br>Animation: keyframes<br>Blox: visual code</div><div class="asset-section-title" style="margin-top:12px">3D Assets</div><div class="tool-grid"><button ${is3d?'':'disabled'} onclick="addAdvancedAsset('cube')">Cube</button><button ${is3d?'':'disabled'} onclick="addAdvancedAsset('sphere')">Sphere</button><button ${is3d?'':'disabled'} onclick="addAdvancedAsset('plane')">Plane</button><button ${is3d?'':'disabled'} onclick="addAdvancedAsset('light')">Light</button><button ${is3d?'':'disabled'} onclick="addAdvancedAsset('camera')">Camera</button></div><div class="small" style="margin-top:8px">${is3d?'3D assets are ready for this 3D project.':'3D assets are shown here and become active when the project type is switched to 3D.'}</div><button class="btn primary full" style="margin-top:12px" onclick="mexAI()">Ask MEX AI</button><button class="btn full" style="margin-top:8px" onclick="polizerAI()">Run Polizer on selected Blox</button></div>`);}}
-async function mexAI(){if(!isStudio()){openPlans();return;}const q=prompt("Tell MEX AI what you want your game to do:");if(!q)return;toast("MEX AI is thinking…");try{const {data,error}=await invokeAuthenticatedFunction("mex-ai",{message:q,context:{game:editor.game?.title,gameType:editor.game?.game_type,objects:editor.objects,selectedObject:editor.objects.find(o=>o.id===editor.selected)||null,textFields:editor.objects.filter(o=>o.type==="text").map(o=>({id:o.id,text:o.text||o.label||""}))}});if(error)throw Error(await edgeErrorText(error,"MEX AI service could not complete the request."));if(data?.error)throw Error(data.message||data.error);openGeneric(`<div class="head"><div><h2>MEX AI</h2><p>Advanced Studio assistant</p></div><button class="btn" onclick="closeGeneric()">Close</button></div><div class="notice ok" style="white-space:pre-wrap">${esc(data?.reply||"MEX AI returned no text.")}</div>`);}catch(x){console.error(x);toast(friendlyError(x.message||"MEX AI is unavailable right now."),"bad");}}
+function openAdvancedTools(){if(!editor.advanced){toast("Open this project with Advanced Studio to use these tools.","bad");return;}const panel=document.getElementById("properties");if(panel){document.getElementById("advancedToolDetails")?.remove();const is3d=editor.game?.game_type==="3d";panel.insertAdjacentHTML("beforeend",`<div id="advancedToolDetails" class="advanced-tools-panel" style="margin-top:12px"><b>Advanced Tools</b><div class="small" style="margin-top:8px">Camera: orbit / zoom<br>Lighting: scene lights<br>Physics: gravity / collisions<br>Animation: keyframes<br>Blox: visual code</div><div class="asset-section-title" style="margin-top:12px">3D Assets</div><div class="tool-grid"><button ${is3d?'':'disabled'} onclick="addAdvancedAsset('cube')">Cube</button><button ${is3d?'':'disabled'} onclick="addAdvancedAsset('sphere')">Sphere</button><button ${is3d?'':'disabled'} onclick="addAdvancedAsset('plane')">Plane</button><button ${is3d?'':'disabled'} onclick="addAdvancedAsset('light')">Light</button><button ${is3d?'':'disabled'} onclick="addAdvancedAsset('camera')">Camera</button></div><div class="small" style="margin-top:8px">${is3d?'3D assets are ready for this 3D project.':'3D assets are shown here and become active when the project type is switched to 3D.'}</div><button class="btn primary full" style="margin-top:12px" onclick="openMexAIChat()">Ask MEX AI</button><button class="btn full" style="margin-top:8px" onclick="polizerAI()">Run Polizer on selected Blox</button></div>`);}}
+let mexAIHistory=[];
+let mexAISending=false;
+function openMexAIChat(){
+ if(!isStudio()){openPlans();return;}
+ const panel=document.getElementById("mexAIChatPanel");
+ if(!panel){toast("Open the Create page to use MEX AI.","bad");return;}
+ panel.hidden=false;panel.scrollIntoView({behavior:"smooth",block:"start"});
+ setTimeout(()=>document.getElementById("mexAIChatInput")?.focus(),220);
+}
+function closeMexAIChat(){const p=document.getElementById("mexAIChatPanel");if(p)p.hidden=true;}
+function appendMexAIMessage(role,text,isError=false){
+ const box=document.getElementById("mexAIChatMessages");if(!box)return null;
+ const item=document.createElement("div");item.className="mex-chat-message "+role+(isError?" error":"");item.textContent=String(text||"");box.appendChild(item);box.scrollTop=box.scrollHeight;return item;
+}
+async function sendMexAIMessage(){
+ if(mexAISending)return;if(!isStudio()){openPlans();return;}
+ const input=document.getElementById("mexAIChatInput"),send=document.getElementById("mexAIChatSend");
+ const q=String(input?.value||"").trim();if(!q)return;
+ mexAISending=true;if(send){send.disabled=true;send.textContent="Thinking…";}
+ appendMexAIMessage("user",q);if(input)input.value="";
+ const pending=appendMexAIMessage("assistant","MEX AI is thinking…");
+ try{
+  const context={game:editor.game?.title,gameType:editor.game?.game_type,objects:(editor.objects||[]).slice(0,80).map(o=>({id:o.id,type:o.type,label:o.label||o.text||"",x:o.x,y:o.y,width:o.width,height:o.height,rules:o.rules||[]})),selectedObject:editor.objects.find(o=>o.id===editor.selected)||null};
+  const {data,error}=await invokeAuthenticatedFunction("mex-ai",{message:q,history:mexAIHistory.slice(-12),context});
+  if(error)throw Error(await edgeErrorText(error,"MEX AI could not complete the request."));
+  if(data?.error)throw Error(data.message||data.error);
+  const reply=String(data?.reply||"").trim();if(!reply)throw Error("MEX AI returned an empty response.");
+  if(pending)pending.textContent=reply;
+  mexAIHistory.push({role:"user",content:q},{role:"assistant",content:reply});mexAIHistory=mexAIHistory.slice(-20);
+ }catch(x){console.error("MEX AI chat:",x);const message=friendlyError(x.message||"MEX AI is temporarily unavailable.");if(pending){pending.classList.add("error");pending.textContent=message;}else appendMexAIMessage("assistant",message,true);}
+ finally{mexAISending=false;if(send){send.disabled=false;send.textContent="Ask Mex AI";}input?.focus();}
+}
 async function polizerAI(){
-  if(!isStudio()){openPlans();return;}
-  if(!editor.selected){toast("Select an object first so Polizer knows which Blox rules to repair.","bad");return;}
-  const obj=editor.objects.find(o=>o.id===editor.selected);if(!obj){toast("Select an object first.","bad");return;}
-  const request=prompt("What should this object do? Polizer will inspect the current game and propose Blox-rule corrections.");if(!request)return;
-  toast("Polizer is checking the Blox rules…");
-  try{
-    const draft={game:{id:editor.game?.id,title:editor.game?.title,game_type:editor.game?.game_type},objects:editor.objects,selectedObjectId:obj.id};
-    const {data,error}=await invokeAuthenticatedFunction("polizer-ai",{action:"fix_blox",request,draft,selectedObjectId:obj.id});
-    if(error)throw Error(await edgeErrorText(error,"Polizer could not complete the request."));
-    if(data?.error)throw Error(data.message||data.error);
-    const fixes=Array.isArray(data?.corrected_rules)?data.corrected_rules.filter(r=>!r.object_id||r.object_id===obj.id):[];
-    if(!fixes.length)throw Error(data?.summary||"Polizer returned no corrected rules for this object.");
-    obj.rules=fixes.map(r=>({when:String(r.when||"game_start"),do:String(r.do||"message"),target:String(r.target||"selected"),...(r.value!==undefined&&r.value!==""?{value:r.value}:{}),...(r.variable?{variable:r.variable}:{})}));
-    editor.dirty=true;renderEditor();
-    toast("Polizer proposed corrected rules. Test the game before publishing.","ok");
-    openGeneric(`<div class="head"><div><h2>Polizer</h2><p>Blox-code repair result</p></div><button class="btn" onclick="closeGeneric()">Close</button></div><div class="notice ok" style="white-space:pre-wrap">${esc(data.summary||"Review the corrected rules below.")}</div><div class="rules" style="margin-top:12px">${obj.rules.map(r=>`<div class="rule"><span class="block when">WHEN ${esc(r.when)}</span><span class="block do">DO ${esc(r.do)}</span><span class="small">${esc(r.target||"selected")}${r.value!==undefined?` = ${esc(r.value)}`:""}</span></div>`).join("")}</div>`);
-  }catch(x){console.error(x);toast(friendlyError(x.message||"Polizer is unavailable right now."),"bad");}
+ if(!isStudio()){openPlans();return;}
+ if(!editor.selected){toast("Select the object whose Blox rules you want Polizer to repair.","bad");return;}
+ const obj=editor.objects.find(o=>o.id===editor.selected);if(!obj){toast("Select an object first.","bad");return;}
+ toast("Polizer is checking and correcting the selected object's Blox rules…");
+ try{
+  const intent=String(obj.goal||obj.description||obj.label||obj.text||"").trim();
+  const request=intent
+   ?"Automatically inspect and repair the selected object's Blox rules so they correctly implement this intended behavior: "+intent+". Preserve intended behavior and return corrected rules without asking follow-up questions."
+   :"Automatically inspect the selected object's existing Blox rules and repair missing, invalid, contradictory, or incomplete rules. Infer reasonable behavior from the object type and nearby game objects. Do not ask follow-up questions; return corrected rules.";
+  const draft={game:{id:editor.game?.id,title:editor.game?.title,game_type:editor.game?.game_type},objects:editor.objects,selectedObjectId:obj.id,selectedObject:obj};
+  const {data,error}=await invokeAuthenticatedFunction("polizer-ai",{action:"fix_blox",request,draft,selectedObjectId:obj.id});
+  if(error)throw Error(await edgeErrorText(error,"Polizer could not complete the request."));
+  if(data?.error)throw Error(data.message||data.error);
+  const fixes=Array.isArray(data?.corrected_rules)?data.corrected_rules.filter(r=>!r.object_id||r.object_id===obj.id):[];
+  if(!fixes.length)throw Error(data?.summary||"Polizer returned no corrected rules. Add an object label or goal and try again.");
+  obj.rules=fixes.map(r=>({when:String(r.when||"game_start"),do:String(r.do||"message"),target:String(r.target||"selected"),...(r.value!==undefined&&r.value!==""?{value:r.value}:{}),...(r.variable?{variable:r.variable}:{})}));
+  editor.dirty=true;renderEditor();toast("Polizer applied corrected Blox rules. Test the game before publishing.","ok");
+  openGeneric('<div class="head"><div><h2>Polizer</h2><p>Blox-code repair result</p></div><button class="btn" onclick="closeGeneric()">Close</button></div><div class="notice ok" style="white-space:pre-wrap">'+esc(data.summary||"Polizer has applied corrected rules to the selected object.")+'</div><div class="rules" style="margin-top:12px">'+obj.rules.map(r=>'<div class="rule"><span class="block when">WHEN '+esc(r.when)+'</span><span class="block do">DO '+esc(r.do)+'</span><span class="small">'+esc(r.target||"selected")+(r.value!==undefined?' = '+esc(r.value):"")+'</span></div>').join("")+'</div>');
+ }catch(x){console.error("Polizer:",x);toast(friendlyError(x.message||"Polizer is temporarily unavailable."),"bad");}
 }
 async function renderGame(gameId){
   const {data:game,error}=await db.from("games").select("id,title,description,game_type,maturity_rating,owner_id,published_at,creator_name_snapshot,pay_to_play,play_price,play_currency,chat_enabled").eq("id",gameId).eq("status","published").single();
