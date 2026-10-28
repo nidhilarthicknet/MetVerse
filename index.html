@@ -1272,7 +1272,7 @@ function openGameCreate(type="2d",advanced=false){
   const ws=document.getElementById("newGameWorkspace"),ts=document.getElementById("newGameTypeSelect");
   if(ws)ws.value=advanced?"advanced":"free";
   if(ts)ts.value=type;
-  document.getElementById("newGameType").value=type;
+  document.getElementById("newGameTypeWizard").value=type;document.getElementById("newGameTypeStudio").value=type;
   document.getElementById("newGameTitle").value="";
   document.getElementById("newGameDescription").value="";
   const thumbInput=document.getElementById("newGameThumbnail");if(thumbInput)thumbInput.value="";
