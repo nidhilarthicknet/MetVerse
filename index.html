@@ -864,11 +864,11 @@ body{overflow-y:auto;overscroll-behavior-y:auto;}
 <div class="modal" id="gameCreateModal"><div class="modal-box" style="width:min(650px,100%)">
   <div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><div><h2 style="margin:0">Create a game</h2><div class="small">Set the basics before opening the creator.</div></div><button class="btn" onclick="closeGameCreate()">Close</button></div>
   <form class="form" id="gameCreateForm" style="margin-top:18px">
-    <input type="hidden" id="newGameType" value="2d">
+    <input type="hidden" id="newGameTypeWizard" value="2d">
     <div><label>Game name</label><input id="newGameTitle" maxlength="120" required placeholder="Block Breaker"></div>
     <div><label>Description</label><textarea id="newGameDescription" maxlength="2000" placeholder="What is your game about?"></textarea></div>
     <div><label>Game thumbnail <span class="small">(optional)</span></label><input id="newGameThumbnail" type="file" accept="image/*"><div class="small" style="margin-top:5px">This image becomes your game's identity in Play and Explore.</div></div>
-    <div class="form-row"><div><label>Creator workspace</label><select id="newGameWorkspace" onchange="syncCreateWorkspace()"><option value="free">Free Creator</option><option value="advanced">Advanced Studio</option></select></div><div><label>Game type</label><select id="newGameTypeSelect" onchange="syncCreateGameType()"><option value="2d">2D</option><option value="3d">3D</option></select><input type="hidden" id="newGameType" value="2d"></div></div><div class="form-row"><div><label>Maturity rating</label><select id="newGameMaturity"><option value="all">All</option><option value="7+">7+</option><option value="12+">12+</option><option value="13+">13+</option><option value="16+">16+</option><option value="18+">18+</option></select></div><div class="notice" style="margin:0">Advanced Studio supports both 2D and 3D. Free Creator is 2D.</div></div>
+    <div class="form-row"><div><label>Creator workspace</label><select id="newGameWorkspace" onchange="syncCreateWorkspace()"><option value="free">Free Creator</option><option value="advanced">Advanced Studio</option></select></div><div><label>Game type</label><select id="newGameTypeSelect" onchange="syncCreateGameType()"><option value="2d">2D</option><option value="3d">3D</option></select><input type="hidden" id="newGameTypeStudio" value="2d"></div></div><div class="form-row"><div><label>Maturity rating</label><select id="newGameMaturity"><option value="all">All</option><option value="7+">7+</option><option value="12+">12+</option><option value="13+">13+</option><option value="16+">16+</option><option value="18+">18+</option></select></div><div class="notice" style="margin:0">Advanced Studio supports both 2D and 3D. Free Creator is 2D.</div></div>
     <div id="chatOptionWrap" class="notice" style="display:none"><label style="display:flex;align-items:center;gap:10px;cursor:pointer"><input id="newGameChat" type="checkbox"> Enable game chat</label><div class="small" style="margin-top:6px">Chat is available for 13+ creator accounts when the game is rated 13+ or higher. Messages are checked server-side.</div></div>
     <div class="notice"><b>Pay to play</b><br>Default: No. If enabled, players pay once through METPAY before they can play the published game. METPAY settlement uses the fictional METXON JP ledger; this prototype does not connect to cards or bank payments.</div>
     <div class="form-row"><div><label>Pay to play needed?</label><select id="newGamePay" onchange="toggleNewGamePayFields()"><option value="no">No</option><option value="yes">Yes</option></select></div><div id="newGamePriceWrap" style="display:none"><label>Price</label><input id="newGamePrice" inputmode="decimal" placeholder="1000"></div></div>
@@ -1287,7 +1287,7 @@ function openGameCreate(type="2d",advanced=false){
 }
 function closeGameCreate(){document.getElementById("gameCreateModal").classList.remove("open");}
 function syncCreateWorkspace(){
-  const ws=document.getElementById("newGameWorkspace"),ts=document.getElementById("newGameTypeSelect"),hidden=document.getElementById("newGameType");
+  const ws=document.getElementById("newGameWorkspace"),ts=document.getElementById("newGameTypeSelect"),hidden=document.getElementById("newGameTypeStudio");
   const advanced=ws?.value==="advanced";
   if(advanced&&!isStudio()){ws.value="free";pendingAdvancedStudio=false;toast("Advanced Studio requires Base, Pro or Ultra.","bad");return;}
   pendingAdvancedStudio=advanced;
@@ -1295,7 +1295,7 @@ function syncCreateWorkspace(){
   if(ts)ts.disabled=!advanced;
   if(hidden)hidden.value=ts?.value||"2d";
 }
-function syncCreateGameType(){const ts=document.getElementById("newGameTypeSelect"),hidden=document.getElementById("newGameType");if(hidden)hidden.value=ts?.value||"2d";}
+function syncCreateGameType(){const ts=document.getElementById("newGameTypeSelect"),value=ts?.value||"2d";["newGameTypeWizard","newGameTypeStudio"].forEach(id=>{const hidden=document.getElementById(id);if(hidden)hidden.value=value;});}
 function updateChatOption(){
   const v=document.getElementById("newGameMaturity")?.value,wrap=document.getElementById("chatOptionWrap"),cb=document.getElementById("newGameChat");
   const creatorEligible=["13_15","16_18","18_plus"].includes(currentProfile?.age_category); const enabled=creatorEligible&&["13+","16+","18+"].includes(v); if(wrap)wrap.style.display=enabled?"block":"none"; if(!enabled&&cb)cb.checked=false;
@@ -1312,7 +1312,7 @@ document.getElementById("gameCreateForm").addEventListener("submit",async e=>{
   e.preventDefault();
   const err=document.getElementById("newGameFormError");err.textContent="";
   if(!currentUser){closeGameCreate();openAuth();return;}
-  const type=document.getElementById("newGameTypeSelect")?.value||document.getElementById("newGameType").value;
+  const type=document.getElementById("newGameTypeSelect")?.value||document.getElementById("newGameTypeStudio").value;
   const title=document.getElementById("newGameTitle").value.trim();
   const description=document.getElementById("newGameDescription").value.trim();
   const maturity=document.getElementById("newGameMaturity").value;
