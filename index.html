@@ -987,25 +987,45 @@ function toggleAuthMode(){
   document.getElementById("switchText").textContent=authMode==="login"?"New to MetVerse?":"Already have an account?";
   document.getElementById("switchButton").textContent=authMode==="login"?"Create account":"Login";
 }
+async function metxonAuthV2(action,payload){
+  const {data,error}=await metxonClient.functions.invoke("metxon-auth-v2",{body:{action,username:payload.username,password:payload.password,display_name:payload.displayName||payload.username,age_category:payload.ageCategory||null,country:payload.country||null,app:"metverse"}});
+  if(error)throw Error(await edgeErrorText(error,"Metxon authentication is unavailable right now. Please try again later."));
+  if(data?.error)throw Error(data.error);
+  if(!data?.session)throw Error("Metxon authentication did not return a session.");
+  return data;
+}
 document.getElementById("authForm").addEventListener("submit",async e=>{
   e.preventDefault();const err=document.getElementById("authError");err.textContent="";
   try{
     const username=document.getElementById("username").value.trim().toLowerCase(),password=document.getElementById("password").value;
     if(!/^[a-z0-9_]{3,24}$/.test(username))throw Error("Username must be 3–24 characters and use letters, numbers, or underscores.");
     if(password.length<8)throw Error("Password must be at least 8 characters.");
+    let local;
     if(authMode==="register"){
       const displayName=document.getElementById("displayName").value.trim()||username,ageCategory=AGE_MAP[document.getElementById("ageCategory").value],country=document.getElementById("countrySelect")?.value||"";
       if(!country)throw Error("Please choose your country.");
+      try{await metxonAuthV2("signup",{username,password,displayName,ageCategory,country});}
+      catch(centralError){
+        const msg=String(centralError?.message||centralError);
+        if(!/already|taken|exists|registered/i.test(msg))throw centralError;
+        await metxonAuthV2("login",{username,password,displayName,ageCategory,country});
+      }
       const {data,error}=await db.functions.invoke("metgames-auth",{body:{action:"signup",username,password,displayName,ageCategory,country,display_name:displayName,age_category:ageCategory}});
-      if(error)throw Error(await edgeErrorText(error,"MetVerse login service is unavailable right now. Please try again later."));if(data?.error)throw Error(data.error);if(!data?.session)throw Error("MetVerse login service did not return a session.");
-      const {error:setErr}=await db.auth.setSession(data.session);if(setErr)throw setErr;
+      if(error)throw Error(await edgeErrorText(error,"MetVerse game account setup failed. Please try again later."));
+      if(data?.error)throw Error(data.error);
+      if(!data?.session)throw Error("MetVerse game service did not return a session.");
+      local=data;
     }else{
+      await metxonAuthV2("login",{username,password});
       const {data,error}=await db.functions.invoke("metgames-auth",{body:{action:"login",username,password}});
-      if(error)throw Error(await edgeErrorText(error,"MetVerse login service is unavailable right now. Please try again later."));if(data?.error)throw Error(data.error);if(!data?.session)throw Error("MetVerse login service did not return a session.");
-      const {error:setErr}=await db.auth.setSession(data.session);if(setErr)throw setErr;
+      if(error)throw Error(await edgeErrorText(error,"MetVerse game account migration is incomplete. Please contact support."));
+      if(data?.error)throw Error("Metxon sign-in succeeded, but this account has no compatible MetVerse game profile yet. Existing game data has not been changed. ("+data.error+")");
+      if(!data?.session)throw Error("MetVerse game service did not return a session.");
+      local=data;
     }
+    const {error:setErr}=await db.auth.setSession(local.session);if(setErr)throw setErr;
     await refreshUser();closeAuth();toast("Welcome to MetVerse.","ok");navigate("profile");
-  }catch(x){console.error(x);err.textContent=/non-2xx|Edge Function/i.test(String(x.message||""))?"Login service is unavailable right now. Please try again later.":(x.message||"Authentication failed.");}
+  }catch(x){console.error(x);err.textContent=/non-2xx|Edge Function/i.test(String(x.message||""))?"Authentication service is unavailable right now. Please try again later.":(x.message||"Authentication failed.");}
 });
 async function logout(){await db.auth.signOut();currentUser=null;currentProfile=null;currentEntitlement=null;updateAccountUI();navigate("home");}
 
