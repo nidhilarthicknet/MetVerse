@@ -908,6 +908,7 @@ const db=createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoR
 const METXON_URL="https://brahcvovidgjjzpkxsms.supabase.co";
 const METXON_KEY="sb_publishable_FFhWnTcsx3JflSHkIDaSaQ_Mwhh83up";
 const metxonClient=createClient(METXON_URL,METXON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+const metxonPayClient=createClient(METXON_URL,METXON_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
 const METXON_AUTH_FUNCTION=METXON_URL+"/functions/v1/metxon-auth-v2";
 const METPAY_MERCHANT="jurassic park";
 
@@ -1717,7 +1718,7 @@ async function startGamePurchase(gameId){
     if(start?.free||start?.creator||start?.already_paid){toast("Game access is ready.","ok");await renderGame(gameId);return;}
 
     const username=String(currentProfile?.username||"").trim().toLowerCase();
-    const {data:resolvedName,error:resolveError}=await metxonClient.rpc("resolve_metpay_username",{p_username:username});
+    const {data:resolvedName,error:resolveError}=await metxonPayClient.rpc("resolve_metpay_username",{p_username:username});
     if(resolveError)throw Error("METPAY could not check the linked METACCOUNT.");
     const metxonUsername=String(resolvedName||"").trim();
     if(!metxonUsername){openMetxonAccountHelp();return;}
@@ -1725,23 +1726,23 @@ async function startGamePurchase(gameId){
     const authResponse=await fetch(METXON_AUTH_FUNCTION,{method:"POST",headers:{"Content-Type":"application/json","apikey":METXON_KEY},body:JSON.stringify({action:"login",username:metxonUsername,password:prompt("Enter your METACCOUNT / METXON password to authorize this METPAY game purchase. It is not stored by MetGames:")||""})});
     const authData=await authResponse.json().catch(()=>({}));
     if(!authResponse.ok||!authData.session)throw Error(authData.error||"METACCOUNT password was not accepted.");
-    const {error:setError}=await metxonClient.auth.setSession({access_token:authData.session.access_token,refresh_token:authData.session.refresh_token});
+    const {error:setError}=await metxonPayClient.auth.setSession({access_token:authData.session.access_token,refresh_token:authData.session.refresh_token});
     if(setError)throw Error("METPAY could not open the METXON session.");
 
-    const {data:transfer,error:transferError}=await metxonClient.rpc("metxon_transfer_game_purchase",{p_payer_username:metxonUsername,p_creator_username:start.creator_metxon_username,p_amount_jp:Number(start.settlement_jp),p_reference:String(start.reference)});
+    const {data:transfer,error:transferError}=await metxonPayClient.rpc("metxon_transfer_game_purchase",{p_payer_username:metxonUsername,p_creator_username:start.creator_metxon_username,p_amount_jp:Number(start.settlement_jp),p_reference:String(start.reference)});
     if(transferError)throw Error(transferError.message||"METPAY transfer failed.");
     if(transfer?.error)throw Error(transfer.error);
 
-    const oldSession=(await metxonClient.auth.getSession()).data.session;
+    const oldSession=(await metxonPayClient.auth.getSession()).data.session;
     if(!oldSession?.access_token)throw Error("METPAY session could not be verified.");
     const {data:complete,error:completeError}=await db.functions.invoke("metgames-payment",{body:{action:"complete_game_purchase",gameId,reference:start.reference,oldAccessToken:oldSession.access_token}});
     if(completeError)throw Error(completeError.message||"Purchase could not be finalized.");
     if(complete?.error)throw Error(complete.error);
-    await metxonClient.auth.signOut();
+    await metxonPayClient.auth.signOut();
     toast(`METPAY payment completed. You can now play ${start.purchase?.game_id===gameId?"the game":"this game"}.`,"ok");
     await renderGame(gameId);
   }catch(x){
-    try{await metxonClient.auth.signOut();}catch{}
+    try{await metxonPayClient.auth.signOut();}catch{}
     toast(x.message||"METPAY game purchase could not be completed.","bad");
   }
 }
@@ -1927,13 +1928,13 @@ async function startPayment(planId){
     const authData=await authResponse.json().catch(()=>({}));
     if(!authResponse.ok||!authData.session)throw Error(authData.error||"METXON username or password is incorrect. If this account does not exist, create it on METXON.");
 
-    const {error:setError}=await metxonClient.auth.setSession({
+    const {error:setError}=await metxonPayClient.auth.setSession({
       access_token:authData.session.access_token,
       refresh_token:authData.session.refresh_token
     });
     if(setError)throw Error("METPAY could not open the METXON session.");
 
-    const {data:transfer,error:transferError}=await metxonClient.rpc("metxon_transfer_metgames",{
+    const {data:transfer,error:transferError}=await metxonPayClient.rpc("metxon_transfer_metgames",{
       recipient_username:METPAY_MERCHANT,
       transfer_amount:Number(start.amount_jp),
       payment_reference:String(start.reference)
@@ -1941,7 +1942,7 @@ async function startPayment(planId){
     if(transferError){const m=String(transferError.message||"");if(/insufficient|low balance|not enough balance/i.test(m))throw Error("METPAY_LOW_BALANCE: The selected METXON account does not have enough JP.");throw Error(m);}
     if(transfer?.error)throw Error(transfer.error);
 
-    const oldSession=(await metxonClient.auth.getSession()).data.session;
+    const oldSession=(await metxonPayClient.auth.getSession()).data.session;
     if(!oldSession?.access_token)throw Error("METPAY session could not be verified.");
 
     const {data:complete,error:completeError}=await db.functions.invoke("metgames-payment",{body:{
@@ -1950,13 +1951,13 @@ async function startPayment(planId){
     if(completeError)throw Error(await edgeErrorText(completeError,"METPAY payment verification failed."));
     if(complete?.error)throw Error(complete.error);
 
-    await metxonClient.auth.signOut();
+    await metxonPayClient.auth.signOut();
     closePlans();
     await refreshUser();
     updateAccountUI();
     toast(`METPAY payment completed: ${Number(start.amount_jp).toLocaleString()} JP/week. Your ${PLANS[planId]?.name||planId} subscription is active.`,"ok");
   }catch(x){
-    try{await metxonClient.auth.signOut();}catch{}
+    try{await metxonPayClient.auth.signOut();}catch{}
     toast(x.message||"METPAY payment could not be completed.","bad");
   }
 }
@@ -2031,17 +2032,17 @@ async function authorizeMetPayAndTransfer(context,currency){
   const authResponse=await fetch(METXON_AUTH_FUNCTION,{method:'POST',headers:{'Content-Type':'application/json','apikey':METXON_KEY},body:JSON.stringify({action:'login',username:credentials.username,password:credentials.password})});
   const authData=await authResponse.json().catch(()=>({}));credentials.password='';
   if(!authResponse.ok||!authData.session){const detail=String(authData.error||authData.message||'').toLowerCase();const accountMissing=/not found|user not found|no user|invalid login credentials|invalid credentials|does not exist/.test(detail);openGeneric(`<div class="head"><div><h2>METPAY sign-in failed</h2><p>METXON could not verify that account.</p></div><button class="btn" onclick="closeGeneric()">Close</button></div><div class="notice bad">${accountMissing?'We could not sign in to that METXON account. Check the username, or create a METXON account first.':'METXON did not approve this sign-in. Check the account details and try again, or use the METXON site to recover your account.'} MetVerse and METXON usernames/passwords do not need to match.</div><a class="btn primary full" style="margin-top:12px" href="https://nidhilarthicknet.github.io/metxon/" target="_blank" rel="noopener">Open METXON to sign in or create an account</a>`);throw Error(accountMissing?'METXON account not found or sign-in failed. Create a METXON account if you do not have one.':'METPAY sign-in failed. Check the METXON details or open METXON from the sign-in page.');}
-  const {error:setError}=await metxonClient.auth.setSession({access_token:authData.session.access_token,refresh_token:authData.session.refresh_token});
+  const {error:setError}=await metxonPayClient.auth.setSession({access_token:authData.session.access_token,refresh_token:authData.session.refresh_token});
   if(setError)throw Error('METPAY could not open the verified METXON session.');
   let transfer;
   if(context.kind==='subscription'){
-    const {data,error}=await metxonClient.rpc('metxon_transfer_metgames',{recipient_username:METPAY_MERCHANT,transfer_amount:Number(context.start.amount_jp),payment_reference:String(context.start.reference)});
+    const {data,error}=await metxonPayClient.rpc('metxon_transfer_metgames',{recipient_username:METPAY_MERCHANT,transfer_amount:Number(context.start.amount_jp),payment_reference:String(context.start.reference)});
     if(error)throw Error(error.message||'METPAY transfer failed.');if(data?.error)throw Error(data.error);transfer=data;
   }else{
-    const {data,error}=await metxonClient.rpc('metxon_transfer_game_purchase',{p_payer_username:credentials.username,p_creator_username:context.start.creator_metxon_username,p_amount_jp:Number(context.start.settlement_jp),p_reference:String(context.start.reference)});
+    const {data,error}=await metxonPayClient.rpc('metxon_transfer_game_purchase',{p_payer_username:credentials.username,p_creator_username:context.start.creator_metxon_username,p_amount_jp:Number(context.start.settlement_jp),p_reference:String(context.start.reference)});
     if(error)throw Error(error.message||'METPAY transfer failed.');if(data?.error)throw Error(data.error);transfer=data;
   }
-  const oldSession=(await metxonClient.auth.getSession()).data.session;
+  const oldSession=(await metxonPayClient.auth.getSession()).data.session;
   if(!oldSession?.access_token)throw Error('METPAY session could not be verified.');
   closeGeneric();await transition('metware');await transition('metxon');
   let complete;
@@ -2052,7 +2053,7 @@ async function authorizeMetPayAndTransfer(context,currency){
     const {data,error}=await db.functions.invoke('metgames-payment',{body:{action:'complete_game_purchase',gameId:context.gameId,reference:context.start.reference,oldAccessToken:oldSession.access_token,currency}});
     if(error)throw Error(await edgeErrorText(error,'METPAY purchase verification failed.'));if(data?.error)throw Error(data.error);complete=data;
   }
-  try{await metxonClient.auth.signOut();}catch{}
+  try{await metxonPayClient.auth.signOut();}catch{}
   return {complete,transfer};
 }
 async function startPayment(planId){
@@ -2065,7 +2066,7 @@ async function startPayment(planId){
     const {complete}=await authorizeMetPayAndTransfer({kind:'subscription',planId,start},currency);
     closePlans();await refreshUser();updateAccountUI();await showPaymentSuccess('Your subscription renewal has been verified.',`${Number(start.amount_jp).toLocaleString()} JP/week · ${PLANS[planId]?.name||planId} · ${currency}`);
     toast(`METPAY payment completed. Your ${PLANS[planId]?.name||planId} subscription is active.`,'ok');
-  }catch(x){try{await metxonClient.auth.signOut();}catch{}toast(friendlyError(x.message||'METPAY payment could not be completed.'),'bad');}
+  }catch(x){try{await metxonPayClient.auth.signOut();}catch{}toast(friendlyError(x.message||'METPAY payment could not be completed.'),'bad');}
 }
 async function startGamePurchase(gameId){
   if(!currentUser){openAuth();return;}
@@ -2078,7 +2079,7 @@ async function startGamePurchase(gameId){
     await authorizeMetPayAndTransfer({kind:'game',gameId,start},currency);
     await showPaymentSuccess('Your game purchase is complete.',`${Number(start.settlement_jp||0).toLocaleString()} JP · ${currency}`);
     toast('METPAY payment completed. You can now play this game.','ok');await renderGame(gameId);
-  }catch(x){try{await metxonClient.auth.signOut();}catch{}toast(friendlyError(x.message||'METPAY game purchase could not be completed.'),'bad');}
+  }catch(x){try{await metxonPayClient.auth.signOut();}catch{}toast(friendlyError(x.message||'METPAY game purchase could not be completed.'),'bad');}
 }
 
 /* Creator frame, timeline, text styling and QuickUp */
