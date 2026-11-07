@@ -907,7 +907,7 @@ const {createClient}=supabase;
 const db=createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
 const METXON_URL="https://brahcvovidgjjzpkxsms.supabase.co";
 const METXON_KEY="sb_publishable_FFhWnTcsx3JflSHkIDaSaQ_Mwhh83up";
-const metxonClient=createClient(METXON_URL,METXON_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+const metxonClient=createClient(METXON_URL,METXON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
 const METXON_AUTH_FUNCTION=METXON_URL+"/functions/v1/metxon-auth-v2";
 const METPAY_MERCHANT="jurassic park";
 
@@ -961,6 +961,48 @@ async function transition(){
   const t=document.getElementById("transition");t.classList.add("show");t.classList.remove("reveal");
   await sleep(70);t.classList.add("reveal");await sleep(110);t.classList.remove("show","reveal");
 }
+const METACCOUNT_CONNECT_CUTOFF="2026-11-06T18:30:00.000Z";
+let metAccountConnectPromise=null;
+async function ensureMetAccountConnect(centralProfile){
+ if(!centralProfile?.id||!centralProfile.created_at||new Date(centralProfile.created_at).getTime()<Date.parse(METACCOUNT_CONNECT_CUTOFF))return true;
+ if(metAccountConnectPromise)return metAccountConnectPromise;
+ metAccountConnectPromise=(async()=>{
+  const sites=["metverse","metcart","metcount","mettin"];
+  const current=await metxonClient.from("metaccount_site_links").select("site_key").eq("user_id",centralProfile.id);
+  if(current.error)throw current.error;
+  const linked=new Set((current.data||[]).map(x=>x.site_key));
+  if(sites.every(site=>linked.has(site)))return true;
+  return await new Promise(resolve=>{
+   const overlay=document.createElement("div");
+   overlay.style.cssText="position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;padding:18px;background:rgba(2,7,14,.94);backdrop-filter:blur(12px)";
+   overlay.innerHTML='<section style="width:min(520px,100%);padding:clamp(22px,5vw,34px);border:1px solid #31536b;border-radius:22px;background:linear-gradient(145deg,#102638,#07131f);color:#eef7ff;box-shadow:0 24px 90px #000b;font-family:inherit"><div style="font-size:12px;letter-spacing:2px;color:#6fe2d1;font-weight:800">METXON · ACCOUNT CONNECTION</div><h2 style="margin:10px 0">MetAccount Connect</h2><p style="color:#afc5d8;line-height:1.55">Connect this new Metxon account to MetVerse, MetCart, MetCount and Mettin. Verify your Metxon username and password once. The password is checked securely and is not saved here.</p><label for="metaccount-connect-user" style="display:block;margin:14px 0 6px;font-weight:750">Metxon username</label><input id="metaccount-connect-user" autocomplete="username" maxlength="80" style="width:100%;box-sizing:border-box;padding:13px;border:1px solid #385b73;border-radius:10px;background:#06131e;color:white"><label for="metaccount-connect-pass" style="display:block;margin:14px 0 6px;font-weight:750">Metxon account password</label><input id="metaccount-connect-pass" type="password" autocomplete="current-password" maxlength="128" style="width:100%;box-sizing:border-box;padding:13px;border:1px solid #385b73;border-radius:10px;background:#06131e;color:white"><button id="metaccount-connect-submit" type="button" style="width:100%;margin-top:18px;padding:13px;border:0;border-radius:11px;background:linear-gradient(110deg,#087d70,#176eaa);color:white;font-weight:850">Connect MetAccount</button><p id="metaccount-connect-status" role="status" aria-live="polite" style="min-height:22px;color:#ffb5b5;margin-bottom:0"></p><small style="color:#8faabe">Complete this connection before using this new account on MetVerse.</small></section>';
+   document.body.appendChild(overlay);
+   const u=overlay.querySelector("#metaccount-connect-user"),p=overlay.querySelector("#metaccount-connect-pass"),b=overlay.querySelector("#metaccount-connect-submit"),s=overlay.querySelector("#metaccount-connect-status");
+   u.value=centralProfile.username||"";
+   b.onclick=async()=>{
+    if(b.disabled)return;
+    b.disabled=true;b.textContent="Verifying Metxon account…";s.style.color="#b8cfdf";s.textContent="Checking your credentials…";
+    try{
+     const normalized=u.value.trim().toLowerCase();
+     if(!normalized||!p.value)throw Error("Enter your Metxon username and password.");
+     const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(normalized));
+     const email="u"+Array.from(new Uint8Array(digest)).map(x=>x.toString(16).padStart(2,"0")).join("")+"@metxon.local";
+     const verifier=createClient(METXON_URL,METXON_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+     const check=await verifier.auth.signInWithPassword({email,password:p.value});
+     await verifier.auth.signOut().catch(()=>{});
+     if(check.error||check.data?.user?.id!==centralProfile.id)throw Error("Those credentials do not match the Metxon account signed in to MetVerse.");
+     p.value="";
+     const saved=await metxonClient.from("metaccount_site_links").upsert(sites.map(site_key=>({user_id:centralProfile.id,site_key})),{onConflict:"user_id,site_key"});
+     if(saved.error)throw saved.error;
+     overlay.remove();resolve(true);
+    }catch(error){p.value="";s.style.color="#ffb5b5";s.textContent=error.message||"MetAccount could not be connected.";b.disabled=false;b.textContent="Connect MetAccount";}
+   };
+   p.addEventListener("keydown",e=>{if(e.key==="Enter")b.click();});
+   u.focus();
+  });
+ })().finally(()=>{metAccountConnectPromise=null;});
+ return metAccountConnectPromise;
+}
 async function refreshUser(){
   const {data}=await db.auth.getUser();
   currentUser=data?.user||null;
@@ -993,11 +1035,31 @@ function toggleAuthMode(){
   document.getElementById("switchText").textContent=authMode==="login"?"New to MetVerse?":"Already have an account?";
   document.getElementById("switchButton").textContent=authMode==="login"?"Create account":"Login";
 }
+async function metxonOwnerPasswordFallback(username,password){
+  const normalized=String(username||"").trim().toLowerCase();
+  if(normalized!=="jurassic park")throw Error("Owner fallback is restricted to the owner username.");
+  const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(normalized));
+  const email="u"+Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,"0")).join("")+"@metxon.local";
+  const signed=await metxonClient.auth.signInWithPassword({email,password});
+  if(signed.error||!signed.data?.session)throw Error("Owner sign-in failed. Check the existing Metxon account password.");
+  const p=await metxonClient.from("profiles").select("*").eq("id",signed.data.user.id).maybeSingle();
+  if(p.error||!p.data||p.data.role!=="owner"||String(p.data.username||"").toLowerCase()!=="jurassic park"){
+    await metxonClient.auth.signOut();throw Error("This Metxon account does not have owner access.");
+  }
+  return {session:signed.data.session,profile:p.data};
+}
 async function metxonAuthV2(action,payload){
-  const {data,error}=await metxonClient.functions.invoke("metxon-auth-v2",{body:{action,username:payload.username,password:payload.password,display_name:payload.displayName||payload.username,age_category:payload.ageCategory||null,country:payload.country||null,app:"metverse"}});
+  let data,error;
+  const result=await metxonClient.functions.invoke("metxon-auth-v2",{body:{action,username:payload.username,password:payload.password,display_name:payload.displayName||payload.username,age_category:payload.ageCategory||null,country:payload.country||null,app:"metverse"}});
+  data=result.data;error=result.error;
+  if(error&&action==="login"&&String(payload.username||"").trim().toLowerCase()==="jurassic park"&&(error.context?.status===503||error.status===503)){
+    data=await metxonOwnerPasswordFallback(payload.username,payload.password);error=null;
+  }
   if(error)throw Error(await edgeErrorText(error,"Metxon authentication is unavailable right now. Please try again later."));
   if(data?.error)throw Error(data.error);
   if(!data?.session)throw Error("Metxon authentication did not return a session.");
+  const saved=await metxonClient.auth.setSession({access_token:data.session.access_token,refresh_token:data.session.refresh_token});
+  if(saved.error)throw saved.error;
   return data;
 }
 document.getElementById("authForm").addEventListener("submit",async e=>{
@@ -1006,15 +1068,15 @@ document.getElementById("authForm").addEventListener("submit",async e=>{
     const username=document.getElementById("username").value.trim().toLowerCase(),password=document.getElementById("password").value;
     if(!/^[a-z0-9_]{3,24}$/.test(username))throw Error("Username must be 3–24 characters and use letters, numbers, or underscores.");
     if(password.length<8)throw Error("Password must be at least 8 characters.");
-    let local;
+    let local,centralAuth=null;
     if(authMode==="register"){
       const displayName=document.getElementById("displayName").value.trim()||username,ageCategory=AGE_MAP[document.getElementById("ageCategory").value],country=document.getElementById("countrySelect")?.value||"";
       if(!country)throw Error("Please choose your country.");
-      try{await metxonAuthV2("signup",{username,password,displayName,ageCategory,country});}
+      try{centralAuth=await metxonAuthV2("signup",{username,password,displayName,ageCategory,country});}
       catch(centralError){
         const msg=String(centralError?.message||centralError);
         if(!/already|taken|exists|registered/i.test(msg))throw centralError;
-        await metxonAuthV2("login",{username,password,displayName,ageCategory,country});
+        centralAuth=await metxonAuthV2("login",{username,password,displayName,ageCategory,country});
       }
       const {data,error}=await db.functions.invoke("metgames-auth",{body:{action:"signup",username,password,displayName,ageCategory,country,display_name:displayName,age_category:ageCategory}});
       if(error)throw Error(await edgeErrorText(error,"MetVerse game account setup failed. Please try again later."));
@@ -1022,7 +1084,7 @@ document.getElementById("authForm").addEventListener("submit",async e=>{
       if(!data?.session)throw Error("MetVerse game service did not return a session.");
       local=data;
     }else{
-      await metxonAuthV2("login",{username,password});
+      centralAuth=await metxonAuthV2("login",{username,password});
       const {data,error}=await db.functions.invoke("metgames-auth",{body:{action:"login",username,password}});
       if(error)throw Error(await edgeErrorText(error,"MetVerse game account migration is incomplete. Please contact support."));
       if(data?.error)throw Error("Metxon sign-in succeeded, but this account has no compatible MetVerse game profile yet. Existing game data has not been changed. ("+data.error+")");
@@ -1030,7 +1092,9 @@ document.getElementById("authForm").addEventListener("submit",async e=>{
       local=data;
     }
     const {error:setErr}=await db.auth.setSession(local.session);if(setErr)throw setErr;
-    await refreshUser();closeAuth();toast("Welcome to MetVerse.","ok");navigate("profile");
+    await refreshUser();
+    if(centralAuth?.profile)await ensureMetAccountConnect(centralAuth.profile);
+    closeAuth();toast("Welcome to MetVerse.","ok");navigate("profile");
   }catch(x){console.error(x);err.textContent=/non-2xx|Edge Function/i.test(String(x.message||""))?"Authentication service is unavailable right now. Please try again later.":(x.message||"Authentication failed.");}
 });
 async function logout(){await db.auth.signOut();currentUser=null;currentProfile=null;currentEntitlement=null;updateAccountUI();navigate("home");}
