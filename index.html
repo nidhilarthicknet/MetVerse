@@ -805,6 +805,7 @@ body{overflow-y:auto;overscroll-behavior-y:auto;}
     <button data-nav="create" onclick="navigate('create')">Create</button>
     <button data-nav="search" onclick="navigate('search')">Search</button>
     <button data-nav="profile" onclick="navigate('profile')">Profile</button>
+    <button data-nav="settings" onclick="navigate('settings')">Settings</button>
   </nav>
   <div class="account">
     <button class="upgrade-chip" id="planButton" onclick="openPlans()">↑ Upgrade</button>
@@ -1035,12 +1036,18 @@ document.getElementById("authForm").addEventListener("submit",async e=>{
 async function logout(){await db.auth.signOut();currentUser=null;currentProfile=null;currentEntitlement=null;updateAccountUI();navigate("home");}
 
 async function navigate(page,opt={}){
-  if((page==="create"||page==="profile")&&!currentUser){openAuth();return;}
+  if((page==="create"||page==="profile"||page==="settings")&&!currentUser){openAuth();return;}
   await transition();currentPage=page;location.hash=page==="game"?`#game/${opt.gameId}`:`#${page}`;
   document.querySelectorAll("[data-nav]").forEach(b=>b.classList.toggle("active",b.dataset.nav===page));
-  if(page==="home")return renderHome();if(page==="play")return renderPlay();if(page==="trailers")return renderTrailers();if(page==="create")return renderCreate();if(page==="search")return renderSearch();if(page==="profile")return renderProfile();if(page==="game")return renderGame(opt.gameId);
+  if(page==="home")return renderHome();if(page==="play")return renderPlay();if(page==="trailers")return renderTrailers();if(page==="create")return renderCreate();if(page==="search")return renderSearch();if(page==="profile")return renderProfile();if(page==="settings")return renderMetVerseSettings();if(page==="game")return renderGame(opt.gameId);
 }
 
+async function renderMetVerseSettings(){
+ if(!currentUser){openAuth();return;}
+ setApp('<div class="section-title"><h2>Settings</h2><span>MetVerse and connected Metxon services</span></div>'+
+ '<section class="card" style="padding:24px"><h3>MetConnect</h3><p>Open private username-based messages and calls in a separate MetConnect window. Screen sharing is available in browsers that support desktop display capture over HTTPS.</p><p><strong>One-time install:</strong> π50 (50 JP). MetPay confirmation appears in the MetConnect window if the app is not installed yet.</p><button class="btn primary" type="button" onclick="window.open(\'https://nidhilarthicknet.github.io/Mettin/?openApp=metconnect\',\'MetConnect\',\'popup,width=1120,height=820,resizable=yes,scrollbars=yes\')">Open MetConnect window ↗</button></section>'+
+ '<section class="card" style="padding:24px;margin-top:15px"><h3>MetAccount</h3><p>Your MetVerse profile is paired with your Metxon sign-in through the shared Metxon authentication service. Continue to use the same Metxon username and password when prompted.</p></section>');
+}
 async function renderSearch(){
   setApp(`<div class="section-title"><h2>Search</h2><span>Find players, creators and games</span></div><div class="search-box"><input id="peopleSearch" class="input" placeholder="Search creators or usernames…" autocomplete="off"><button class="btn primary" onclick="runPeopleSearch()">Search</button></div><div id="peopleResults" class="grid" style="margin-top:18px"><div class="empty">Search above or explore below.</div></div><section style="margin-top:28px"><div class="section-title"><h2>Explore Creators</h2><span>Creators building games in MetVerse</span></div><div id="exploreCreators" class="grid"><div class="empty">Loading creators…</div></div></section><section style="margin-top:28px"><div class="section-title"><h2>Explore Games</h2><span>Published games</span></div><div id="exploreSearchGames" class="grid"><div class="empty">Loading games…</div></div></section>`);
   const input=document.getElementById("peopleSearch");input?.addEventListener("keydown",e=>{if(e.key==="Enter")runPeopleSearch();});
