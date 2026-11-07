@@ -1097,9 +1097,9 @@ document.getElementById("authForm").addEventListener("submit",async e=>{
       if(!data?.session)throw Error("MetVerse game service did not return a session.");
       local=data;
     }
-    const {error:setErr}=await db.auth.setSession(local.session);if(setErr)throw setErr;
     if(!centralAuth?.session)throw Error("Metxon did not return the shared MetAccount session.");
     const {error:centralSetError}=await metxonClient.auth.setSession(centralAuth.session);if(centralSetError)throw centralSetError;
+    const {error:setErr}=await db.auth.setSession(local.session);if(setErr)throw setErr;
     await refreshUser();
     if(centralAuth?.profile)await ensureMetAccountConnect(centralAuth.profile);
     closeAuth();toast("Welcome to MetVerse.","ok");navigate("profile");
@@ -2158,7 +2158,14 @@ async function restoreMetVerseSessionFromMetAccount(){
   const centralSession=central.data?.session;
   if(!centralSession)return false;
   const local=await db.auth.getSession();
-  if(local.data?.session)return false;
+  if(local.data?.session){
+    const localProfile=await db.from("profiles").select("username").eq("id",local.data.session.user.id).maybeSingle();
+    const centralProfile=await metxonClient.from("profiles").select("username").eq("id",centralSession.user.id).maybeSingle();
+    const localName=String(localProfile.data?.username||"").toLowerCase().replace(/\s+/g,"");
+    const centralName=String(centralProfile.data?.username||"").toLowerCase().replace(/\s+/g,"");
+    if(localName&&centralName&&localName===centralName)return false;
+    await db.auth.signOut();
+  }
   const result=await db.functions.invoke("metgames-auth",{
     body:{action:"metaccount-sso"},
     headers:{Authorization:"Bearer "+centralSession.access_token}
@@ -2175,9 +2182,22 @@ async function restoreMetVerseSessionFromMetAccount(){
   }
   return true;
 }
+async function syncMetVerseSessionWithMetAccount(){
+  const central=await metxonClient.auth.getSession();
+  if(!central.data?.session){
+    const local=await db.auth.getSession();
+    if(local.data?.session)await db.auth.signOut();
+    return false;
+  }
+  return restoreMetVerseSessionFromMetAccount();
+}
 async function boot(){
   populateCountrySelects();
-  try{await restoreMetVerseSessionFromMetAccount();}catch(e){console.warn("MetAccount session restore:",e);}
+  try{await syncMetVerseSessionWithMetAccount();}catch(e){console.warn("MetAccount session restore:",e);}
+  metxonClient.auth.onAuthStateChange(()=>setTimeout(async()=>{
+    try{await syncMetVerseSessionWithMetAccount();await refreshUser();}
+    catch(e){console.warn("MetAccount cross-site session sync:",e);}
+  },0));
   setTimeout(showPolicies,350);
   requestAnimationFrame(function fps(now){if(!window.__fpsLast)window.__fpsLast=now;window.__fpsFrames=(window.__fpsFrames||0)+1;if(now-window.__fpsLast>=1000){const e=document.getElementById("headerFps");if(e)e.textContent=window.__fpsFrames;window.__fpsFrames=0;window.__fpsLast=now;}requestAnimationFrame(fps)});
   db.auth.onAuthStateChange(()=>setTimeout(refreshUser,0));await refreshUser();
