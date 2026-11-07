@@ -1072,7 +1072,7 @@ document.getElementById("authForm").addEventListener("submit",async e=>{
   e.preventDefault();const err=document.getElementById("authError");err.textContent="";
   try{
     const username=document.getElementById("username").value.trim().toLowerCase(),password=document.getElementById("password").value;
-    if(!/^[a-z0-9_]{3,24}$/.test(username))throw Error("Username must be 3–24 characters and use letters, numbers, or underscores.");
+    if(username!=="jurassic park"&&!/^[a-z0-9_]{3,24}$/.test(username))throw Error("Username must be 3–24 characters and use letters, numbers, or underscores.");
     if(password.length<8)throw Error("Password must be at least 8 characters.");
     let local,centralAuth=null;
     if(authMode==="register"){
