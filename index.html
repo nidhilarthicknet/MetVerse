@@ -1011,6 +1011,11 @@ async function refreshUser(){
     currentProfile=p||null;
     const {data:e}=await db.from("creator_entitlements").select("*").eq("user_id",currentUser.id).order("updated_at",{ascending:false}).limit(1).maybeSingle();
     currentEntitlement=e||null;
+    const centralSession=await metxonClient.auth.getSession();
+    if(centralSession.data?.session){
+      const centralProfile=await metxonClient.from("profiles").select("id,username,role,created_at").eq("id",centralSession.data.session.user.id).maybeSingle();
+      if(!centralProfile.error&&centralProfile.data)await ensureMetAccountConnect(centralProfile.data);
+    }
   }else{currentProfile=null;currentEntitlement=null;}
   updateAccountUI();
   if(currentUser && !currentProfile?.country) setTimeout(openCountrySetup,250);
