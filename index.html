@@ -1083,16 +1083,16 @@ document.getElementById("authForm").addEventListener("submit",async e=>{
         if(!/already|taken|exists|registered/i.test(msg))throw centralError;
         centralAuth=await metxonAuthV2("login",{username,password,displayName,ageCategory,country});
       }
-      const {data,error}=await db.functions.invoke("metgames-auth",{body:{action:"signup",username,password,displayName,ageCategory,country,display_name:displayName,age_category:ageCategory}});
+      const {data,error}=await db.functions.invoke("metgames-auth",{body:{action:"metaccount-sso"},headers:{Authorization:"Bearer "+centralAuth.session.access_token}});
       if(error)throw Error(await edgeErrorText(error,"MetVerse game account setup failed. Please try again later."));
       if(data?.error)throw Error(data.error);
       if(!data?.session)throw Error("MetVerse game service did not return a session.");
       local=data;
     }else{
       centralAuth=await metxonAuthV2("login",{username,password});
-      const {data,error}=await db.functions.invoke("metgames-auth",{body:{action:"login",username,password}});
+      const {data,error}=await db.functions.invoke("metgames-auth",{body:{action:"metaccount-sso"},headers:{Authorization:"Bearer "+centralAuth.session.access_token}});
       if(error)throw Error(await edgeErrorText(error,"MetVerse game account migration is incomplete. Please contact support."));
-      if(data?.error)throw Error("Metxon sign-in succeeded, but this account has no compatible MetVerse game profile yet. Existing game data has not been changed. ("+data.error+")");
+      if(data?.error)throw Error("MetAccount sign-in succeeded, but MetVerse could not restore the linked game profile. ("+data.error+")");
       if(!data?.session)throw Error("MetVerse game service did not return a session.");
       local=data;
     }
