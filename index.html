@@ -1097,12 +1097,14 @@ document.getElementById("authForm").addEventListener("submit",async e=>{
       local=data;
     }
     const {error:setErr}=await db.auth.setSession(local.session);if(setErr)throw setErr;
+    if(!centralAuth?.session)throw Error("Metxon did not return the shared MetAccount session.");
+    const {error:centralSetError}=await metxonClient.auth.setSession(centralAuth.session);if(centralSetError)throw centralSetError;
     await refreshUser();
     if(centralAuth?.profile)await ensureMetAccountConnect(centralAuth.profile);
     closeAuth();toast("Welcome to MetVerse.","ok");navigate("profile");
   }catch(x){console.error(x);err.textContent=/non-2xx|Edge Function/i.test(String(x.message||""))?"Authentication service is unavailable right now. Please try again later.":(x.message||"Authentication failed.");}
 });
-async function logout(){await db.auth.signOut();currentUser=null;currentProfile=null;currentEntitlement=null;updateAccountUI();navigate("home");}
+async function logout(){await Promise.all([db.auth.signOut(),metxonClient.auth.signOut()]);currentUser=null;currentProfile=null;currentEntitlement=null;updateAccountUI();navigate("home");}
 
 async function navigate(page,opt={}){
   if((page==="create"||page==="profile"||page==="settings")&&!currentUser){openAuth();return;}
@@ -2150,8 +2152,31 @@ async function storeUnusedFramesInQuickUp(frames=null){
 const _basePublishCurrentGame=publishCurrentGame;
 publishCurrentGame=async function(){if(!editor.game)return;const existing=editor.endTimeSeconds==null?'never':String(editor.endTimeSeconds);openGeneric(`<div class="head"><div><h2>Publish game</h2><p>Set when the game timeline ends.</p></div><button class="btn" onclick="closeGeneric()">Cancel</button></div><form id="publishEndTimeForm" class="form"><div><label>End time</label><select id="publishEndChoice" onchange="document.getElementById('publishEndSecondsWrap').style.display=this.value==='specific'?'block':'none'"><option value="never" ${existing==='never'?'selected':''}>Never</option><option value="specific" ${existing!=='never'?'selected':''}>At a specific time</option></select></div><div id="publishEndSecondsWrap" style="display:${existing==='never'?'none':'block'}"><label>End after (seconds)</label><input id="publishEndSeconds" type="number" min="1" max="86400" value="${existing==='never'?'60':esc(existing)}"></div><div id="publishEndError" class="form-error"></div><button class="btn primary full" type="submit">Save end time & publish</button></form>`);document.getElementById('publishEndTimeForm').onsubmit=async e=>{e.preventDefault();const choice=document.getElementById('publishEndChoice').value;const sec=Number(document.getElementById('publishEndSeconds').value);if(choice==='specific'&&(!Number.isFinite(sec)||sec<1||sec>86400)){document.getElementById('publishEndError').textContent='Enter a time from 1 to 86400 seconds.';return;}editor.endTimeSeconds=choice==='never'?null:sec;closeGeneric();const usedFrames=new Set((editor.timelineItems||[]).filter(x=>x.type==='frame').map(x=>x.objectId));const unusedFrames=editor.objects.filter(o=>o.type==='frame'&&!usedFrames.has(o.id));if(unusedFrames.length){const stored=await storeUnusedFramesInQuickUp(unusedFrames);if(!stored)return;const unusedIds=new Set(unusedFrames.map(o=>o.id));editor.objects=editor.objects.filter(o=>!unusedIds.has(o.id));if(unusedIds.has(editor.selected))editor.selected=null;editor.dirty=true;}const saved=await saveProject();if(saved===false)return;const manifest={engine:editor.advanced?'metgames-advanced':'metgames-2d',schema:3,objects:editor.objects,settings:{advanced:editor.advanced,timelineLengthSeconds:Number(editor.timelineLengthSeconds||60),endTimeSeconds:editor.endTimeSeconds},timelineItems:editor.timelineItems||[],timelineLengthSeconds:Number(editor.timelineLengthSeconds||60),endTimeSeconds:editor.endTimeSeconds};const {data,error}=await db.rpc('publish_game',{p_game_id:editor.game.id,p_manifest:manifest});if(error){toast(friendlyError(error.message||'Could not publish the game.'),'bad');return;}const {error:settingsError}=await db.from('games').update({timeline_length_seconds:Number(editor.timelineLengthSeconds||60),end_time_seconds:editor.endTimeSeconds}).eq('id',editor.game.id).eq('owner_id',currentUser.id);if(settingsError)console.warn('Published but game timing columns could not be saved:',settingsError.message);editor.game.status='published';editor.game.published_at=new Date().toISOString();editor.version=Array.isArray(data)?data[0]:data;toast(editor.endTimeSeconds==null?'Game published. End time: Never.':'Game published. End time: '+editor.endTimeSeconds+' seconds.','ok');renderEditor();};};
 
+async function restoreMetVerseSessionFromMetAccount(){
+  const central=await metxonClient.auth.getSession();
+  const centralSession=central.data?.session;
+  if(!centralSession)return false;
+  const local=await db.auth.getSession();
+  if(local.data?.session)return false;
+  const result=await db.functions.invoke("metgames-auth",{
+    body:{action:"metaccount-sso"},
+    headers:{Authorization:"Bearer "+centralSession.access_token}
+  });
+  if(result.error)throw Error(await edgeErrorText(result.error,"MetVerse could not restore the connected MetAccount."));
+  if(!result.data?.session)throw Error(result.data?.error||"MetVerse did not return a linked game session.");
+  const set=await db.auth.setSession(result.data.session);
+  if(set.error)throw set.error;
+  await refreshUser();
+  if(currentProfile){
+    const centralProfileResult=await metxonClient.from("profiles").select("id,username,created_at").eq("id",centralSession.user.id).maybeSingle();
+    if(centralProfileResult.error)throw centralProfileResult.error;
+    if(centralProfileResult.data)await ensureMetAccountConnect(centralProfileResult.data);
+  }
+  return true;
+}
 async function boot(){
   populateCountrySelects();
+  try{await restoreMetVerseSessionFromMetAccount();}catch(e){console.warn("MetAccount session restore:",e);}
   setTimeout(showPolicies,350);
   requestAnimationFrame(function fps(now){if(!window.__fpsLast)window.__fpsLast=now;window.__fpsFrames=(window.__fpsFrames||0)+1;if(now-window.__fpsLast>=1000){const e=document.getElementById("headerFps");if(e)e.textContent=window.__fpsFrames;window.__fpsFrames=0;window.__fpsLast=now;}requestAnimationFrame(fps)});
   db.auth.onAuthStateChange(()=>setTimeout(refreshUser,0));await refreshUser();
